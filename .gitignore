@@ -1,0 +1,12 @@
+.workbuddy/
+node_modules/
+dist/
+target/
+*.iml
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
