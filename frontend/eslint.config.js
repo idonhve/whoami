@@ -1,4 +1,5 @@
 import js from '@eslint/js'
+import globals from 'globals'
 import pluginVue from 'eslint-plugin-vue'
 import tseslint from 'typescript-eslint'
 
@@ -13,6 +14,12 @@ export default tseslint.config(
       parserOptions: {
         parser: tseslint.parser,
       },
+    },
+  },
+  {
+    files: ['src/**/*.{ts,vue}'],
+    languageOptions: {
+      globals: globals.browser,
     },
   },
   {

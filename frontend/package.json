@@ -12,6 +12,8 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@fontsource/press-start-2p": "^5.3.0",
+    "@fontsource/vt323": "^5.3.0",
     "echarts": "^5.6.0",
     "gsap": "^3.15.0",
     "naive-ui": "^2.45.3",

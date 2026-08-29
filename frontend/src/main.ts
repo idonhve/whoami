@@ -1,3 +1,5 @@
+import '@fontsource/press-start-2p'
+import '@fontsource/vt323'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 
