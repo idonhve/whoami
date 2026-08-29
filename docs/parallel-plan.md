@@ -13,8 +13,8 @@
 | 0 需求定稿 | 本窗口 | PRD v1.1 + CONTEXT.md + ADR + 素材清单 | - | 已完成 |
 | 1 to-spec | 窗口 A | 按模块生成 `docs/spec/01~12`（每册含 API 契约、表结构、验收标准），并为每册创建 Issue 打 `ready-for-agent` | 阶段 0 | 单窗口（保证一致性） |
 | 1' 素材收集 | 窗口 B | 按 `docs/content-checklist.md` 向站主收集素材 → `docs/content/` | 阶段 0 | **可与 A 并行** |
-| 2 地基 | 窗口 C | 认领 M1 Issue：前后端脚手架 + docker compose + admin 登录 JWT | 阶段 1 | **唯一窗口（串行）** |
-| 3 模块并行 | 窗口 D/E/F… | 各认领 1 个模块 Issue，按对应 spec 实现（前后端 + 验收自测） | 阶段 2 | 2~4 窗口并行 |
+| 2 地基 | 窗口 C | 认领 M1 Issue：前后端脚手架 + docker compose + admin 登录 JWT | 阶段 1 | 已完成（PR #14，含终端/像素/赛博视觉重做） |
+| 3 模块并行 | 窗口 D/E/F… | 各认领 1 个模块 Issue，按对应 spec 实现（前后端 + 验收自测） | 阶段 2 | 2~4 窗口并行（首批：F1 #2 + F6 #7，git worktree 隔离） |
 | 4 集成验收 | 窗口 G | 联调 + 性能红线 + Lighthouse 本地验收（= PRD 的 M4） | 阶段 3 | 单窗口 |
 | 5 上线 | 任意 | 按代码量购境内服务器/域名 + ICP 备案（= PRD 的 M5，站主决定时机） | 阶段 4 | - |
 
