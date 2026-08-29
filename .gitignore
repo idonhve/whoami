@@ -1,6 +1,7 @@
 .workbuddy/
 node_modules/
 dist/
+.vite/
 target/
 *.iml
 .idea/
