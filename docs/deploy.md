@@ -85,15 +85,32 @@ docker compose exec mysql mysql -u root -p"$DB_PASSWORD" whoami -e \
 前后端分离开发模式：
 
 ```bash
-# 后端（需本机 JDK 17+，连本地或容器里的 MySQL）
+# 后端（需本机 JDK 17+，连本地 MySQL 3306）
 cd backend
-DB_HOST=localhost DB_USER=whoami DB_PASSWORD=xxx JWT_SECRET=<32位以上随机串> mvn spring-boot:run
+mvn spring-boot:run        # 自动读取仓库根目录 .env，无需手工传环境变量
 
 # 前端（Vite 开发服务器已配置代理：/api 与 /admin/api → localhost:8080）
 cd frontend
 npm install
 npm run dev
 ```
+
+`application.yml` 已配置 `spring.config.import` 自动导入根目录 `.env`，IDEA 直接启动主类同样生效（工作目录需为 `backend/` 或仓库根目录）。Docker Compose 部署时注入的真实环境变量优先级更高，互不影响。
+
+### 5.1 本地 MySQL 一次性初始化
+
+本机 MySQL 需要先建库和账号（用 root 执行一次；口令与 `.env` 的 `DB_PASSWORD` 保持一致）：
+
+```sql
+CREATE DATABASE IF NOT EXISTS whoami CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'whoami'@'%' IDENTIFIED BY '<.env 里的 DB_PASSWORD>';
+CREATE USER IF NOT EXISTS 'whoami'@'localhost' IDENTIFIED BY '<.env 里的 DB_PASSWORD>';
+GRANT ALL PRIVILEGES ON whoami.* TO 'whoami'@'%';
+GRANT ALL PRIVILEGES ON whoami.* TO 'whoami'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+建表和种子数据由 Flyway 在后端首次启动时自动完成。
 
 常用命令：
 
@@ -133,7 +150,8 @@ npm run dev
 | 现象 | 处理 |
 | --- | --- |
 | `docker compose up` 报变量未设置 | 未创建 `.env`：`cp .env.example .env` 并填写 |
-| 后端起不来，日志含 `JWT_SECRET 未配置或长度不足` | `.env` 里 `JWT_SECRET` 少于 32 字符 |
+| 后端起不来，日志含 `JWT_SECRET 未配置或长度不足` | `.env` 里 `JWT_SECRET` 少于 32 字符；若在 IDEA 启动还报此错，确认工作目录是 `backend/`（找不到 `.env`） |
+| 日志含 `Access denied for user 'whoami'@'localhost'` | 本地 MySQL 未初始化 `whoami` 库/账号，或口令与 `.env` 的 `DB_PASSWORD` 不一致（见 5.1 节） |
 | 登录一直 401 | 密码不对（初始密码见第 3 节），或曾被锁（连续失败 5 次锁 10 分钟） |
 | 想重置数据库 | `docker compose down -v`（会删 MySQL 数据卷，慎用） |
 | 80 端口被占用 | `.env` 设 `HTTP_PORT=8080` 后重启栈 |
