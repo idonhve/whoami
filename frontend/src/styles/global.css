@@ -1,0 +1,170 @@
+/* ============================================================
+   whoami 设计系统 — 终端 / 像素 / 赛博科技
+   像素字体只用于 ASCII 标识（logo、代码、编号），中文走等宽栈
+   （字体文件由 main.ts 导入：Press Start 2P + VT323）
+   ============================================================ */
+
+:root {
+  --bg: #04070b;
+  --bg-panel: #090f16;
+  --bg-raised: #0d151f;
+  --border: #16222f;
+  --border-bright: #24384d;
+  --text: #c8d6e5;
+  --text-dim: #64788f;
+  --green: #00ff9c;
+  --green-soft: rgba(0, 255, 156, 0.12);
+  --green-glow: rgba(0, 255, 156, 0.35);
+  --cyan: #2bd9ff;
+  --magenta: #ff2e88;
+  --amber: #ffb800;
+  --error: #ff3860;
+  --font-pixel: 'Press Start 2P', 'Cascadia Code', Consolas, monospace;
+  --font-term: 'VT323', 'Cascadia Code', Consolas, monospace;
+  --font-mono: 'Cascadia Code', 'JetBrains Mono', Consolas, 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--green);
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--green);
+  color: var(--bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-bright);
+  border: 2px solid var(--bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--green);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+/* ---------- 像素风霓虹按钮 ---------- */
+
+.neon-btn {
+  display: inline-block;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--green);
+  padding: 14px 22px;
+  border: 2px solid var(--green);
+  background: rgba(0, 255, 156, 0.05);
+  text-shadow: 0 0 6px var(--green-glow);
+  box-shadow:
+    0 0 12px rgba(0, 255, 156, 0.12),
+    inset 0 0 12px rgba(0, 255, 156, 0.06);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    transform 0.15s;
+}
+
+.neon-btn:hover:not(:disabled) {
+  background: rgba(0, 255, 156, 0.13);
+  box-shadow:
+    0 0 22px rgba(0, 255, 156, 0.35),
+    inset 0 0 16px rgba(0, 255, 156, 0.1);
+  text-shadow:
+    2px 0 var(--magenta),
+    -2px 0 var(--cyan),
+    0 0 10px var(--green-glow);
+  transform: translateY(-1px);
+}
+
+.neon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* ---------- HUD 四角括号框（像素取景框） ---------- */
+
+.hud-frame {
+  --hud-c: var(--green);
+  --hud-len: 16px;
+  --hud-th: 2px;
+  --hud-inset: 14px;
+  position: absolute;
+  inset: var(--hud-inset);
+  pointer-events: none;
+  background:
+    linear-gradient(var(--hud-c), var(--hud-c)) left top / var(--hud-len) var(--hud-th) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) left top / var(--hud-th) var(--hud-len) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) right top / var(--hud-len) var(--hud-th) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) right top / var(--hud-th) var(--hud-len) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) left bottom / var(--hud-len) var(--hud-th) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) left bottom / var(--hud-th) var(--hud-len) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) right bottom / var(--hud-len) var(--hud-th) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) right bottom / var(--hud-th) var(--hud-len) no-repeat;
+  opacity: 0.55;
+}
+
+/* ---------- 通用动效 ---------- */
+
+@keyframes cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes led-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

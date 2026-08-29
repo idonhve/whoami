@@ -10,3 +10,9 @@ Thumbs.db
 *.log
 .env
 .env.*
+!.env.example
+
+uploads/
+
+# 个人素材（简历/证书/照片）：隐私内容不进公开仓库，走后台上传
+docs/content/
