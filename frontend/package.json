@@ -25,7 +25,9 @@
   "devDependencies": {
     "@eslint/js": "^9.30.0",
     "@types/node": "^22.18.0",
+    "@types/three": "^0.185.4",
     "@vitejs/plugin-vue": "^6.0.8",
+    "@vue/test-utils": "^2.5.0",
     "eslint": "^9.30.0",
     "eslint-plugin-vue": "^10.10.0",
     "happy-dom": "^20.11.15",
