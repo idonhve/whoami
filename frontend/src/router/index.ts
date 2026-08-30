@@ -15,7 +15,7 @@ const router = createRouter({
     {
       path: '/works',
       name: 'works',
-      component: () => import('@/views/PlaceholderView.vue'),
+      component: () => import('@/views/works/WorksView.vue'),
       meta: { title: 'works', spec: 'SPEC-04' },
     },
     {
