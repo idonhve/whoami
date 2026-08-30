@@ -41,6 +41,10 @@ _Avoid_: 成果、亮点
 
 **站点配置（Site Config）**：GitHub 链接、域名占位文案、降级开关等键值对，改配置不改代码。
 
+**公开白名单键（Public Whitelist Key）**：允许经公开接口 `GET /api/site-config` 下发前台的站点配置键，初始为 `domain` / `owner_name` / `github_url` / `degrade_force_full`；其余键一律只限后台。新增公开键需在后端白名单登记。
+
+**后台模块挂载约定（Admin Module Registration）**：各模块管理页在自己目录导出路由配置数组与导航项，后台布局从聚合表读取；新增模块只需在聚合表追加一行。
+
 ### 行为与数据
 
 **访问日志（Visit Log）**：单次访问的 IP、UA、停留时长、浏览路径、来源记录。
