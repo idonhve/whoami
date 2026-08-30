@@ -22,6 +22,24 @@
   --error: #ff3860;
   --error-soft: rgba(255, 56, 96, 0.12);
   --cyan-grid: rgba(43, 217, 255, 0.03);
+  /* GitHub 语言色点（F4 登记，取 linguist 官方主色；映射见 components/works/repoLanguages.ts） */
+  --lang-ts: #3178c6;
+  --lang-js: #f1e05a;
+  --lang-java: #b07219;
+  --lang-python: #3572a5;
+  --lang-go: #00add8;
+  --lang-rust: #dea584;
+  --lang-vue: #41b883;
+  --lang-html: #e34c26;
+  --lang-css: #563d7c;
+  --lang-c: #555555;
+  --lang-cpp: #f34b7d;
+  --lang-shell: #89e051;
+  --lang-kotlin: #a97bff;
+  --lang-swift: #f05138;
+  --lang-php: #4f5d95;
+  --lang-ruby: #701516;
+  --lang-fallback: var(--text-dim);
   --font-pixel: 'Press Start 2P', 'Cascadia Code', Consolas, monospace;
   --font-term: 'VT323', 'Cascadia Code', Consolas, monospace;
   --font-mono: 'Cascadia Code', 'JetBrains Mono', Consolas, 'Courier New', monospace;
