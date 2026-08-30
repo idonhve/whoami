@@ -27,3 +27,8 @@ app:
     secret: ${JWT_SECRET:}
     expires-in-seconds: ${JWT_EXPIRES_IN:7200}
   upload-dir: ${UPLOAD_DIR:./uploads}
+  github:
+    # PAT 只勾选只读公开仓库权限（public_repo），只注入后端，不下发前端
+    token: ${GITHUB_TOKEN:}
+    owner: ${GITHUB_OWNER:}
+    api-base: ${GITHUB_API_BASE:https://api.github.com}
