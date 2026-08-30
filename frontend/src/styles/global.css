@@ -16,6 +16,7 @@
   --green-soft: rgba(0, 255, 156, 0.12);
   --green-glow: rgba(0, 255, 156, 0.35);
   --cyan: #2bd9ff;
+  --cyan-soft: rgba(43, 217, 255, 0.12);
   --magenta: #ff2e88;
   --amber: #ffb800;
   --error: #ff3860;
@@ -132,6 +133,27 @@ a {
     linear-gradient(var(--hud-c), var(--hud-c)) right bottom / var(--hud-len) var(--hud-th) no-repeat,
     linear-gradient(var(--hud-c), var(--hud-c)) right bottom / var(--hud-th) var(--hud-len) no-repeat;
   opacity: 0.55;
+}
+
+/* ---------- 像素进度条（steps 逐格推进） ---------- */
+
+.pixel-bar {
+  display: inline-block;
+  width: 196px;
+  height: 14px;
+  border: 2px solid var(--green);
+  padding: 1px;
+  box-shadow: 0 0 10px rgba(0, 255, 156, 0.25);
+}
+
+.pixel-bar > i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: repeating-linear-gradient(90deg, var(--green) 0 10px, transparent 10px 14px);
+  transform-origin: left;
+  transform: scaleX(0);
+  transition: transform 0.12s steps(4);
 }
 
 /* ---------- 通用动效 ---------- */

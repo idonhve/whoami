@@ -31,6 +31,7 @@
 | `--green-soft` | `rgba(0,255,156,.12)` | 绿底 |
 | `--green-glow` | `rgba(0,255,156,.35)` | 绿光晕 |
 | `--cyan` | `#2bd9ff` | 辅助青 |
+| `--cyan-soft` | `rgba(43,217,255,.12)` | 青底 |
 | `--magenta` | `#ff2e88` | 辅助品红 |
 | `--amber` | `#ffb800` | 辅助琥珀 |
 | `--error` | `#ff3860` | 错误 |
@@ -58,6 +59,8 @@
 | `.crt-overlay` | `App.vue` | 全局 CRT 质感层（扫描线 + 暗角 + 滚动亮带 + 闪烁），`z-index:9999`、`pointer-events:none` |
 | `RouteTransitionOverlay` | `components/RouteTransitionOverlay.vue` | 路由过场遮罩（引导日志 / 白闪 / 光束 / 故障条） |
 | `routeTransition` | `composables/routeTransition.ts` | 路由过场编排（`collapse → boot → reveal`） |
+| `.pixel-bar` | `styles/global.css` | 像素进度条（steps 逐格推进，`scaleX` 驱动，开机动画 / 加载场景复用） |
+| `FrontLayout` | `components/layout/FrontLayout.vue` | 前台页面骨架（AppHeader 命令式导航 + 内容 + AppFooter），前台页面统一包裹 |
 
 新增的复用模式必须登记进本表，避免同一效果重复造。
 
