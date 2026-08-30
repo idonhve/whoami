@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { darkTheme, dateZhCN, NConfigProvider, zhCN } from 'naive-ui'
 
+import FloatingAdminButton from '@/components/admin/FloatingAdminButton.vue'
 import RouteTransitionOverlay from '@/components/RouteTransitionOverlay.vue'
 import { routeTransition } from '@/composables/routeTransition'
 </script>
@@ -10,6 +11,8 @@ import { routeTransition } from '@/composables/routeTransition'
     <div class="view-root" :class="`vt-${routeTransition.phase}`">
       <RouterView />
     </div>
+    <!-- 前台悬浮管理入口：仅管理员（token + me 校验通过）可见，见 Spec 06 -->
+    <FloatingAdminButton />
   </NConfigProvider>
   <RouteTransitionOverlay />
   <div class="crt-overlay" aria-hidden="true"></div>

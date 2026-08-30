@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
+import { adminChildRoutes } from '@/views/admin/layout/registry'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -48,13 +49,16 @@ const router = createRouter({
     },
     {
       path: '/admin',
-      component: () => import('@/views/admin/AdminLayout.vue'),
+      component: () => import('@/views/admin/layout/AdminLayout.vue'),
       children: [
         {
           path: '',
           name: 'admin-home',
           component: () => import('@/views/admin/AdminIndex.vue'),
         },
+        // 模块管理页路由来自聚合表（views/admin/layout/registry.ts），
+        // 新模块不要在此处手写路由，按约定在模块目录导出 AdminModule
+        ...adminChildRoutes,
       ],
     },
     {

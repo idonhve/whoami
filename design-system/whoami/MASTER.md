@@ -35,6 +35,8 @@
 | `--magenta` | `#ff2e88` | 辅助品红 |
 | `--amber` | `#ffb800` | 辅助琥珀 |
 | `--error` | `#ff3860` | 错误 |
+| `--error-soft` | `rgba(255,56,96,.12)` | 错误底（F6 登记） |
+| `--cyan-grid` | `rgba(43,217,255,.03)` | 青色点阵网格底（后台布局用，F6 登记） |
 
 **铁律**：组件内禁止裸写 hex；新增语义色必须先加进 `:root` 再引用。
 
@@ -56,11 +58,13 @@
 |------|------|------|
 | `.neon-btn` | `styles/global.css` | 霓虹像素按钮（hover 有色散 + 上浮） |
 | `.hud-frame` | `styles/global.css` | 四角括号取景框 |
+| `.term-table` | `styles/global.css` | 终端风数据表（后台管理页通用表格样式） |
 | `.crt-overlay` | `App.vue` | 全局 CRT 质感层（扫描线 + 暗角 + 滚动亮带 + 闪烁），`z-index:9999`、`pointer-events:none` |
 | `RouteTransitionOverlay` | `components/RouteTransitionOverlay.vue` | 路由过场遮罩（引导日志 / 白闪 / 光束 / 故障条） |
 | `routeTransition` | `composables/routeTransition.ts` | 路由过场编排（`collapse → boot → reveal`） |
 | `.pixel-bar` | `styles/global.css` | 像素进度条（steps 逐格推进，`scaleX` 驱动，开机动画 / 加载场景复用） |
 | `FrontLayout` | `components/layout/FrontLayout.vue` | 前台页面骨架（AppHeader 命令式导航 + 内容 + AppFooter），前台页面统一包裹 |
+| `FloatingAdminButton` | `components/admin/FloatingAdminButton.vue` | 前台悬浮管理入口（仅管理员 token + me 校验通过时渲染，后台页面自动隐藏） |
 
 新增的复用模式必须登记进本表，避免同一效果重复造。
 

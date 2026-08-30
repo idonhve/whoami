@@ -20,6 +20,8 @@
   --magenta: #ff2e88;
   --amber: #ffb800;
   --error: #ff3860;
+  --error-soft: rgba(255, 56, 96, 0.12);
+  --cyan-grid: rgba(43, 217, 255, 0.03);
   --font-pixel: 'Press Start 2P', 'Cascadia Code', Consolas, monospace;
   --font-term: 'VT323', 'Cascadia Code', Consolas, monospace;
   --font-mono: 'Cascadia Code', 'JetBrains Mono', Consolas, 'Courier New', monospace;
@@ -154,6 +156,42 @@ a {
   transform-origin: left;
   transform: scaleX(0);
   transition: transform 0.12s steps(4);
+}
+
+/* ---------- 终端风数据表（后台管理页通用，Spec 06 登记） ---------- */
+
+.term-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-panel);
+  border: 2px solid var(--border);
+  font-size: 13px;
+}
+
+.term-table th {
+  padding: 10px 12px;
+  text-align: left;
+  color: var(--text-dim);
+  font-weight: 400;
+  letter-spacing: 1px;
+  border-bottom: 2px solid var(--border-bright);
+  white-space: nowrap;
+}
+
+.term-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: top;
+  word-break: break-all;
+}
+
+.term-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.term-table tbody tr:hover td {
+  background: var(--green-soft);
 }
 
 /* ---------- 通用动效 ---------- */

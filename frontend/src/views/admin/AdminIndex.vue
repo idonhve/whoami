@@ -12,7 +12,7 @@ const MODULES: ModuleCard[] = [
   { code: 'F3', title: 'GitHub 图标跳转', status: 'PENDING' },
   { code: 'F4', title: 'GitHub 作品展示', status: 'PENDING' },
   { code: 'F5', title: '访客统计', status: 'PENDING' },
-  { code: 'F6', title: '管理后台框架', status: 'PENDING' },
+  { code: 'F6', title: '管理后台框架', status: 'ONLINE' },
   { code: 'F7', title: '简历下载', status: 'PENDING' },
   { code: 'F8', title: '照片墙 / 奖状栏', status: 'PENDING' },
   { code: 'F9', title: '工作经历', status: 'PENDING' },
@@ -29,7 +29,7 @@ const MODULES: ModuleCard[] = [
         <span class="led" aria-hidden="true"></span>
         SYSTEM ONLINE
       </h1>
-      <p class="sub">$ admin --status · 检测到 13 个模块，1 个已上线</p>
+      <p class="sub">$ admin --status · 检测到 13 个模块，2 个已上线</p>
     </div>
 
     <div class="grid">
