@@ -37,6 +37,7 @@
 | `--error` | `#ff3860` | 错误 |
 | `--error-soft` | `rgba(255,56,96,.12)` | 错误底（F6 登记） |
 | `--cyan-grid` | `rgba(43,217,255,.03)` | 青色点阵网格底（后台布局用，F6 登记） |
+| `--lang-*` 共 17 个 | linguist 官方色 | GitHub 语言色点（`--lang-ts`/`--lang-java`/…/`--lang-fallback`，F4 登记；映射见 `components/works/repoLanguages.ts`，禁止在组件内裸写语言色） |
 
 **铁律**：组件内禁止裸写 hex；新增语义色必须先加进 `:root` 再引用。
 
@@ -65,6 +66,7 @@
 | `.pixel-bar` | `styles/global.css` | 像素进度条（steps 逐格推进，`scaleX` 驱动，开机动画 / 加载场景复用） |
 | `FrontLayout` | `components/layout/FrontLayout.vue` | 前台页面骨架（AppHeader 命令式导航 + 内容 + AppFooter），前台页面统一包裹 |
 | `FloatingAdminButton` | `components/admin/FloatingAdminButton.vue` | 前台悬浮管理入口（仅管理员 token + me 校验通过时渲染，后台页面自动隐藏） |
+| `RepoCard` | `components/works/RepoCard.vue` | 作品卡片（仓库名 pixel 标识 + 语言色点 + star/fork SVG + 滚动渐入 rise-in + hover 3D 倾斜，`/works` 与首页精选复用；语言色映射走 `repoLanguages.ts`，F4 登记） |
 
 新增的复用模式必须登记进本表，避免同一效果重复造。
 
