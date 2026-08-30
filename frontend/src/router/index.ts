@@ -10,6 +10,37 @@ const router = createRouter({
       name: 'home',
       component: () => import('@/views/Home.vue'),
     },
+    // 前台核心区块（F1 建立路由骨架，内容由各 Spec 模块替换 PlaceholderView 填充）
+    {
+      path: '/works',
+      name: 'works',
+      component: () => import('@/views/PlaceholderView.vue'),
+      meta: { title: 'works', spec: 'SPEC-04' },
+    },
+    {
+      path: '/tech',
+      name: 'tech',
+      component: () => import('@/views/PlaceholderView.vue'),
+      meta: { title: 'tech', spec: 'SPEC-02' },
+    },
+    {
+      path: '/experience',
+      name: 'experience',
+      component: () => import('@/views/PlaceholderView.vue'),
+      meta: { title: 'experience', spec: 'SPEC-09' },
+    },
+    {
+      path: '/awards',
+      name: 'awards',
+      component: () => import('@/views/PlaceholderView.vue'),
+      meta: { title: 'awards', spec: 'SPEC-08' },
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: () => import('@/views/PlaceholderView.vue'),
+      meta: { title: 'about', spec: 'SPEC-05/07' },
+    },
     {
       path: '/admin/login',
       name: 'admin-login',
