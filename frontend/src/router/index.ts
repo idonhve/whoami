@@ -21,7 +21,7 @@ const router = createRouter({
     {
       path: '/tech',
       name: 'tech',
-      component: () => import('@/views/PlaceholderView.vue'),
+      component: () => import('@/views/tech/TechStackView.vue'),
       meta: { title: 'tech', spec: 'SPEC-02' },
     },
     {
