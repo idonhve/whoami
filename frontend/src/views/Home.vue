@@ -6,7 +6,7 @@ import { shouldPlayBoot } from '@/composables/bootSession'
 import { resolveDegraded } from '@/composables/degrade'
 import { useSiteStore } from '@/stores/site'
 import BootAnimation from '@/views/boot/BootAnimation.vue'
-import FeaturedWorksPlaceholder from '@/views/home/FeaturedWorksPlaceholder.vue'
+import FeaturedWorks from '@/views/home/FeaturedWorks.vue'
 import HeroSection from '@/views/home/HeroSection.vue'
 import ResumeDownloadPlaceholder from '@/views/home/ResumeDownloadPlaceholder.vue'
 
@@ -36,9 +36,9 @@ onMounted(() => {
   <FrontLayout>
     <HeroSection :owner-name="site.config.ownerName" :degraded="degraded" :active="!showBoot" />
 
-    <!-- Spec 04 填充「精选作品」/ Spec 07 填充「简历下载」 -->
+    <!-- Spec 04「精选作品」已填充 / Spec 07 填充「简历下载」 -->
     <slot name="featured-works">
-      <FeaturedWorksPlaceholder />
+      <FeaturedWorks />
     </slot>
     <slot name="resume-download">
       <ResumeDownloadPlaceholder />

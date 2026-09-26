@@ -29,4 +29,9 @@ describe('后台导航聚合表（挂载约定）', () => {
     expect(names).toContain('admin-config')
     expect(names).toContain('admin-op-logs')
   })
+
+  it('F4 交付的模块已挂载：作品管理', () => {
+    const names = adminModules.flatMap((m) => m.nav.map((n) => n.name))
+    expect(names).toContain('admin-works')
+  })
 })
