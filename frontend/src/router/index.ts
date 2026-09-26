@@ -27,7 +27,7 @@ const router = createRouter({
     {
       path: '/experience',
       name: 'experience',
-      component: () => import('@/views/PlaceholderView.vue'),
+      component: () => import('@/views/experience/ExperienceView.vue'),
       meta: { title: 'experience', spec: 'SPEC-09' },
     },
     {
