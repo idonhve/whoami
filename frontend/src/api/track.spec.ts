@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { trackGithubOutbound } from '@/api/track'
+import { trackGithubIconClick, trackGithubOutbound } from '@/api/track'
 
 describe('github_outbound 埋点上报', () => {
   afterEach(() => {
@@ -58,5 +58,32 @@ describe('github_outbound 埋点上报', () => {
     })
 
     expect(() => trackGithubOutbound('repo')).not.toThrow()
+  })
+})
+
+describe('页头/页脚图标外跳埋点（Spec 03）', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  it.each(['header', 'footer'] as const)('detail 带 %s 来源上报 github_outbound', async (source) => {
+    const beaconSpy = vi.fn().mockReturnValue(true)
+    Object.defineProperty(navigator, 'sendBeacon', {
+      value: beaconSpy,
+      configurable: true,
+    })
+
+    trackGithubIconClick(source)
+
+    expect(beaconSpy).toHaveBeenCalledTimes(1)
+    const [url, blob] = beaconSpy.mock.calls[0]
+    expect(url).toBe('/api/track/event')
+    const text = await (blob as Blob).text()
+    const payload = JSON.parse(text)
+    expect(payload.eventType).toBe('github_outbound')
+    expect(payload.detail).toEqual({ source })
+    expect(payload.pagePath).toBe('/')
+    expect(payload.sessionId).toMatch(/^[0-9a-f-]{36}$/)
   })
 })
