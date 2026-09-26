@@ -8,6 +8,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
@@ -41,6 +42,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiResult<Void>> handleNotFound(NoResourceFoundException e) {
         return ResponseEntity.status(404).body(ApiResult.error(404, "资源不存在"));
+    }
+
+    /** 超过 multipart 体积上限（20MB，见 UploadConfig）的文件在到达 Controller 前即被拒绝 */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResult<Void>> handleMaxUpload(MaxUploadSizeExceededException e) {
+        return ResponseEntity.badRequest().body(ApiResult.error(400, "文件超过 20MB 上限"));
     }
 
     @ExceptionHandler(Exception.class)

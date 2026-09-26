@@ -30,6 +30,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 操作日志切面（Spec 06）：自动拦截全部 /admin/api/** 的 POST/PUT/DELETE，
@@ -143,7 +144,9 @@ public class OpLogAspect {
             if (arg == null
                     || arg instanceof HttpServletRequest
                     || arg instanceof HttpServletResponse
-                    || arg instanceof BindingResult) {
+                    || arg instanceof BindingResult
+                    || arg instanceof MultipartFile) {
+                // MultipartFile 不序列化：getBytes() 会把 20MB 上传物化为千万级元素数组，存在 OOM 风险
                 continue;
             }
             params.add(SensitiveMasker.mask(objectMapper.valueToTree(arg)));
