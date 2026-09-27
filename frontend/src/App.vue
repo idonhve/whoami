@@ -3,9 +3,14 @@ import { darkTheme, dateZhCN, NConfigProvider, zhCN } from 'naive-ui'
 import { onMounted } from 'vue'
 
 import FloatingAdminButton from '@/components/admin/FloatingAdminButton.vue'
+import CommandPalette from '@/components/command-palette/CommandPalette.vue'
 import RouteTransitionOverlay from '@/components/RouteTransitionOverlay.vue'
 import { routeTransition } from '@/composables/routeTransition'
 import { initEasterEgg } from '@/easter-egg'
+import { initTheme } from '@/components/command-palette/theme'
+
+// 主题在 setup 期恢复（首帧前），避免强调色闪烁（Spec 10 theme 命令的持久化）
+initTheme()
 
 onMounted(() => {
   initEasterEgg()
@@ -20,6 +25,7 @@ onMounted(() => {
     <!-- 前台悬浮管理入口：仅管理员（token + me 校验通过）可见，见 Spec 06 -->
     <FloatingAdminButton />
   </NConfigProvider>
+  <CommandPalette />
   <RouteTransitionOverlay />
   <div class="crt-overlay" aria-hidden="true"></div>
 </template>
