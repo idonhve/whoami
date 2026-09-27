@@ -3,6 +3,7 @@ import type { RouteRecordRaw } from 'vue-router'
 import { configAdminModule } from '../config'
 import { experienceAdminModule } from '../experience'
 import { oplogAdminModule } from '../oplog'
+import { resumeAdminModule } from '../resume'
 import { techAdminModule } from '../tech'
 import { worksAdminModule } from '../works'
 import type { AdminModule, AdminNavItem } from './types'
@@ -18,6 +19,7 @@ export const adminModules: AdminModule[] = [
   configAdminModule,
   experienceAdminModule,
   oplogAdminModule,
+  resumeAdminModule,
   techAdminModule,
   worksAdminModule,
 ]
