@@ -57,7 +57,7 @@ describe('饼图数据（按 category 聚合 weight）', () => {
       COLORS,
     )
 
-    const series = option.series?.[0] as { data: { name: string; value: number; data: { items: { name: string }[] } }[] }
+    const series = (Array.isArray(option.series) ? option.series[0] : option.series) as { data: { name: string; value: number; data: { items: { name: string }[] } }[] }
     expect(series.data).toHaveLength(1)
     expect(series.data[0].name).toBe('前端')
     expect(series.data[0].value).toBe(10)
@@ -88,7 +88,7 @@ describe('条状图（熟练度档位映射）', () => {
   it('条状图 option 条形值=档位，渐变发光填充，tooltip 展示熟练度中文', () => {
     const option = buildBarOption([item({ proficiency: 'master', name: 'Vue', category: '前端' })], COLORS)
 
-    const series = option.series?.[0] as { data: { value: number }[]; itemStyle: { color: unknown; shadowBlur: number; shadowColor: string } }
+    const series = (Array.isArray(option.series) ? option.series[0] : option.series) as { data: { value: number }[]; itemStyle: { color: unknown; shadowBlur: number; shadowColor: string } }
     expect(series.data[0].value).toBe(3)
     // 渐变发光填充（linearGradient）——本页唯一重动效锚点
     expect(series.itemStyle.shadowBlur).toBeGreaterThan(0)
