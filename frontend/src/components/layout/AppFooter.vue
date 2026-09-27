@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import GithubIcon from '@/components/shared/GithubIcon.vue'
+
 /**
  * 全局前台页脚。
- * 后续模块挂载点：Spec 03 在 .footer-side 追加 GitHub 图标。
  */
 const year = new Date().getFullYear()
 </script>
@@ -10,8 +11,9 @@ const year = new Date().getFullYear()
   <footer class="app-footer">
     <span class="footer-item">© {{ year }} whoami</span>
     <span class="footer-item footer-mid">EST. 2026 // TERMINAL × PIXEL × NEON</span>
-    <!-- Spec 03 在此追加 GitHub 图标 -->
-    <span class="footer-side"></span>
+    <span class="footer-side">
+      <GithubIcon source="footer" />
+    </span>
   </footer>
 </template>
 

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { RouterLink, useRoute } from 'vue-router'
 
+import GithubIcon from '@/components/shared/GithubIcon.vue'
+
 /**
  * 全局前台页头：命令式导航（导航即命令）。
- * 后续模块挂载点：Spec 03 追加 GitHub 图标、Spec 10 追加 `>_` 命令面板图标（右侧 .header-side）。
+ * 后续模块挂载点：Spec 10 追加 `>_` 命令面板图标（右侧 .header-side）。
  */
 
 const NAV_COMMANDS = [
@@ -40,8 +42,10 @@ function isActive(to: string): boolean {
       </RouterLink>
     </nav>
 
-    <!-- Spec 03 / Spec 10 在此追加图标 -->
-    <div class="header-side"></div>
+    <!-- Spec 10 在此追加命令面板图标 -->
+    <div class="header-side">
+      <GithubIcon source="header" />
+    </div>
   </header>
 </template>
 
