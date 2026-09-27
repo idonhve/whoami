@@ -33,7 +33,7 @@ const router = createRouter({
     {
       path: '/awards',
       name: 'awards',
-      component: () => import('@/views/PlaceholderView.vue'),
+      component: () => import('@/views/awards/AwardsView.vue'),
       meta: { title: 'awards', spec: 'SPEC-08' },
     },
     {
