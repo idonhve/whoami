@@ -39,7 +39,7 @@ const router = createRouter({
     {
       path: '/about',
       name: 'about',
-      component: () => import('@/views/PlaceholderView.vue'),
+      component: () => import('@/views/about/AboutView.vue'),
       meta: { title: 'about', spec: 'SPEC-05/07' },
     },
     {
