@@ -1,5 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router'
 
+import { awardsAdminModule } from '../awards'
 import { configAdminModule } from '../config'
 import { experienceAdminModule } from '../experience'
 import { oplogAdminModule } from '../oplog'
@@ -16,6 +17,7 @@ import type { AdminModule, AdminNavItem } from './types'
  * 侧边导航与 /admin 子路由都从本表读取，不要在别处另起口径。
  */
 export const adminModules: AdminModule[] = [
+  awardsAdminModule,
   configAdminModule,
   experienceAdminModule,
   oplogAdminModule,
