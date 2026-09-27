@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { trackGithubIconClick, trackGithubOutbound } from '@/api/track'
+import { trackEasterEgg, trackGithubIconClick, trackGithubOutbound } from '@/api/track'
 
 describe('github_outbound 埋点上报', () => {
   afterEach(() => {
@@ -85,5 +85,43 @@ describe('页头/页脚图标外跳埋点（Spec 03）', () => {
     expect(payload.detail).toEqual({ source })
     expect(payload.pagePath).toBe('/')
     expect(payload.sessionId).toMatch(/^[0-9a-f-]{36}$/)
+  })
+})
+
+describe('彩蛋埋点上报（Spec 11）', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  it('秘籍触发向 /api/track/event 上报 easter_egg，detail 带 type=konami', async () => {
+    const beaconSpy = vi.fn().mockReturnValue(true)
+    Object.defineProperty(navigator, 'sendBeacon', {
+      value: beaconSpy,
+      configurable: true,
+    })
+
+    trackEasterEgg('konami')
+
+    expect(beaconSpy).toHaveBeenCalledTimes(1)
+    const [url, blob] = beaconSpy.mock.calls[0]
+    expect(url).toBe('/api/track/event')
+    const text = await (blob as Blob).text()
+    const payload = JSON.parse(text)
+    expect(payload.eventType).toBe('easter_egg')
+    expect(payload.detail).toEqual({ type: 'konami' })
+    expect(payload.pagePath).toBe('/')
+    expect(payload.sessionId).toMatch(/^[0-9a-f-]{36}$/)
+  })
+
+  it('sendBeacon 抛异常时静默失败（埋点不影响彩蛋功能）', () => {
+    Object.defineProperty(navigator, 'sendBeacon', {
+      value: vi.fn(() => {
+        throw new Error('beacon down')
+      }),
+      configurable: true,
+    })
+
+    expect(() => trackEasterEgg('konami')).not.toThrow()
   })
 })

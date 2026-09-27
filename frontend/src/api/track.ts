@@ -50,3 +50,8 @@ export function trackGithubOutbound(repoName: string): void {
 export function trackGithubIconClick(source: 'header' | 'footer'): void {
   sendTrackEvent('github_outbound', { source })
 }
+
+/** 彩蛋秘籍触发计入埋点（Spec 11：console 输出无法可靠探测是否被看到，不打点避免误报） */
+export function trackEasterEgg(type: 'konami'): void {
+  sendTrackEvent('easter_egg', { type })
+}
