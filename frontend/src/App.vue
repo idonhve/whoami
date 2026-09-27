@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { darkTheme, dateZhCN, NConfigProvider, zhCN } from 'naive-ui'
+import { onMounted } from 'vue'
 
 import FloatingAdminButton from '@/components/admin/FloatingAdminButton.vue'
 import RouteTransitionOverlay from '@/components/RouteTransitionOverlay.vue'
 import { routeTransition } from '@/composables/routeTransition'
+import { initEasterEgg } from '@/easter-egg'
+
+onMounted(() => {
+  initEasterEgg()
+})
 </script>
 
 <template>
