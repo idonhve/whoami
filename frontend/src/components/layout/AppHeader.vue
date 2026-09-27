@@ -2,6 +2,7 @@
 import { RouterLink, useRoute } from 'vue-router'
 
 import GithubIcon from '@/components/shared/GithubIcon.vue'
+import { openPalette } from '@/components/command-palette/paletteOpen'
 
 /**
  * 全局前台页头：命令式导航（导航即命令）。
@@ -42,8 +43,29 @@ function isActive(to: string): boolean {
       </RouterLink>
     </nav>
 
-    <!-- Spec 10 在此追加命令面板图标 -->
+    <!-- Spec 10 命令面板图标：>_ 唤起（键盘党用 Ctrl+K） -->
     <div class="header-side">
+      <button
+        type="button"
+        class="palette-trigger"
+        aria-label="命令面板（Ctrl+K）"
+        title="命令面板 Ctrl+K"
+        @click="openPalette()"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="square"
+        >
+          <path d="M4 6l6 6-6 6" />
+          <path d="M12 18h8" />
+        </svg>
+      </button>
       <GithubIcon source="header" />
     </div>
   </header>
@@ -125,6 +147,29 @@ function isActive(to: string): boolean {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.palette-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.palette-trigger:hover {
+  color: var(--green);
+  border-color: var(--border-bright);
+  box-shadow: 0 0 12px var(--green-glow);
 }
 
 @media (max-width: 720px) {
