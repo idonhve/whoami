@@ -23,6 +23,7 @@
         <jjwt.version>0.12.7</jjwt.version>
         <thumbnailator.version>0.4.20</thumbnailator.version>
         <webp-imageio.version>0.11.0</webp-imageio.version>
+        <ip2region.version>2.7.0</ip2region.version>
     </properties>
 
     <dependencies>
@@ -80,6 +81,13 @@
             <groupId>com.github.usefulness</groupId>
             <artifactId>webp-imageio</artifactId>
             <version>${webp-imageio.version}</version>
+        </dependency>
+
+        <!-- 访客 IP 归属地离线解析（Spec 05 / ADR-0002）：xdb 从 classpath 加载，零外部 API 依赖 -->
+        <dependency>
+            <groupId>org.lionsoul</groupId>
+            <artifactId>ip2region</artifactId>
+            <version>${ip2region.version}</version>
         </dependency>
 
         <dependency>
