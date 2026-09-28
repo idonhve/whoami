@@ -5,10 +5,14 @@ spring:
   config:
     import: optional:file:.env[.properties],optional:file:../.env[.properties]
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:whoami}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true
+    # DB_URL 整串覆盖（云数据库直连，如 TiDB：sslMode=VERIFY_IDENTITY）；本地/容器走默认拼装
+    url: ${DB_URL:jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:whoami}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true}
     username: ${DB_USER:whoami}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:10}
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -20,6 +24,10 @@ spring:
 
 server:
   port: 8080
+  tomcat:
+    threads:
+      # 默认 200；小内存容器（如 512MB 免费层）通过环境变量调小
+      max: ${TOMCAT_THREADS_MAX:200}
 
 mybatis-plus:
   configuration:
@@ -31,7 +39,9 @@ app:
   jwt:
     secret: ${JWT_SECRET:}
     expires-in-seconds: ${JWT_EXPIRES_IN:7200}
-  upload-dir: ${UPLOAD_DIR:./uploads}
+  cors:
+    # 前后端分域部署时放行前端来源（逗号分隔）；同源部署（docker compose/nginx）无需放行也无害
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost}
   github:
     # PAT 只勾选只读公开仓库权限（public_repo），只注入后端，不下发前端
     token: ${GITHUB_TOKEN:}

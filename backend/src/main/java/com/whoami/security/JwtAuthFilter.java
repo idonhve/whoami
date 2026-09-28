@@ -25,6 +25,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        // 跨域预检不带 token，放行给 MVC 的 CORS 处理
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         if (PUBLIC_PATHS.contains(request.getRequestURI())) {
             filterChain.doFilter(request, response);
             return;

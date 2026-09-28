@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.whoami.common.BizException;
-import com.whoami.config.AppProperties;
 import com.whoami.config.UploadConfig;
 import com.whoami.module.resume.dto.ResumeDownload;
 import com.whoami.module.resume.dto.ResumeLatestDTO;
@@ -14,17 +13,16 @@ import com.whoami.module.resume.entity.ResumeFile;
 import com.whoami.module.resume.mapper.ResumeFileMapper;
 import com.whoami.module.siteconfig.dto.SiteConfigDTO;
 import com.whoami.module.siteconfig.service.SiteConfigService;
+import com.whoami.module.upload.service.UploadBlobService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-/** 简历版本（Spec 07）：上传/版本列表/回滚/下载 + 下载埋点（服务端直写 track_event）。 */
+/** 简历版本（Spec 07）：上传/版本列表/回滚/下载 + 下载埋点（服务端直写 track_event）。文件体存 upload_blob（容器平台磁盘易失）。 */
 @Service
 public class ResumeService {
 
@@ -52,15 +50,16 @@ public class ResumeService {
     private final SiteConfigService siteConfigService;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
-    private final String uploadRoot;
+    private final UploadBlobService uploadBlobService;
 
     public ResumeService(ResumeFileMapper resumeFileMapper, SiteConfigService siteConfigService,
-                         JdbcTemplate jdbcTemplate, ObjectMapper objectMapper, AppProperties appProperties) {
+                         JdbcTemplate jdbcTemplate, ObjectMapper objectMapper,
+                         UploadBlobService uploadBlobService) {
         this.resumeFileMapper = resumeFileMapper;
         this.siteConfigService = siteConfigService;
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
-        this.uploadRoot = appProperties.uploadDir();
+        this.uploadBlobService = uploadBlobService;
     }
 
     /** 公开 latest：按钮显隐与文案 */
@@ -73,24 +72,24 @@ public class ResumeService {
     }
 
     /**
-     * 下载：先直写 resume_download 埋点（浏览器导航下载无法保证前端上报），再返回当前版文件。
-     * 无版本或物理文件缺失时 404。
+     * 下载：先直写 resume_download 埋点（浏览器导航下载无法保证前端上报），再返回当前版内容。
+     * 无版本或内容缺失时 404。
      */
     public ResumeDownload download(HttpServletRequest request) {
         ResumeFile current = current();
         if (current == null) {
             throw new BizException(404, "尚未上传简历");
         }
-        Path physical = uploadRootPath(current.getFilePath());
-        if (!Files.exists(physical)) {
+        UploadBlobService.StoredBlob blob = uploadBlobService.load(current.getFilePath());
+        if (blob == null) {
             throw new BizException(404, "简历文件已丢失");
         }
         recordDownloadEvent(current, request);
-        return new ResumeDownload(physical, current.getDisplayName());
+        return new ResumeDownload(blob.content(), current.getDisplayName());
     }
 
     /**
-     * 上传：递增版本号 + 置为新当前版 + 淘汰超出保留数量的最旧版（记录与物理文件一并删除）。
+     * 上传：递增版本号 + 置为新当前版 + 淘汰超出保留数量的最旧版（记录与内容一并删除）。
      * 事务保证 is_current 全表至多一个 1。
      */
     @Transactional
@@ -112,7 +111,7 @@ public class ResumeService {
                     .eq(ResumeFile::getIsCurrent, true));
             resumeFileMapper.insert(entity);
         } catch (RuntimeException e) {
-            deleteFileQuietly(uploadRootPath(filePath));
+            uploadBlobService.delete(filePath);
             throw e;
         }
         List<Integer> evicted = evictOldest();
@@ -174,18 +173,16 @@ public class ResumeService {
     }
 
     private String storeFile(MultipartFile file, int versionNo) {
+        byte[] content;
         try {
-            Path resumeDir = uploadRootPath(RESUME_DIR);
-            Files.createDirectories(resumeDir);
-            String storageName = UUID.randomUUID().toString().replace("-", "") + "-v" + versionNo + ".pdf";
-            Path target = resumeDir.resolve(storageName);
-            try (InputStream in = file.getInputStream()) {
-                Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
-            }
-            return RESUME_DIR + "/" + storageName;
+            content = file.getInputStream().readAllBytes();
         } catch (IOException e) {
-            throw new BizException(400, "文件保存失败");
+            throw new BizException(400, "文件读取失败");
         }
+        String storageName = UUID.randomUUID().toString().replace("-", "") + "-v" + versionNo + ".pdf";
+        String filePath = RESUME_DIR + "/" + storageName;
+        uploadBlobService.store(filePath, "application/pdf", content);
+        return filePath;
     }
 
     private String buildDisplayName(LocalDateTime uploadedAt) {
@@ -196,7 +193,7 @@ public class ResumeService {
     }
 
     /**
-     * 淘汰超出保留数量的最旧版（记录与物理文件一并删除）。
+     * 淘汰超出保留数量的最旧版（记录与内容一并删除）。
      * 保留规则：当前版 + 最新 (RETAIN_VERSIONS-1) 个历史版——回滚到旧版后继续上传时，
      * 旧当前版不能被"按版本号最旧"淘汰，否则 latest 会失效。
      */
@@ -221,7 +218,7 @@ public class ResumeService {
                 continue;
             }
             resumeFileMapper.deleteById(file.getId());
-            deleteFileQuietly(uploadRootPath(file.getFilePath()));
+            uploadBlobService.delete(file.getFilePath());
             evicted.add(file.getVersionNo());
         }
         return evicted;
@@ -234,7 +231,7 @@ public class ResumeService {
                     EVENT_RESUME_DOWNLOAD,
                     UUID.randomUUID().toString(),
                     "/api/resume/download",
-                    objectMapper.writeValueAsString(java.util.Map.of("versionNo", file.getVersionNo(),
+                    objectMapper.writeValueAsString(Map.of("versionNo", file.getVersionNo(),
                             "displayName", file.getDisplayName())),
                     resolveIp(request));
         } catch (Exception e) {
@@ -248,26 +245,6 @@ public class ResumeService {
             return forwarded.split(",")[0].trim();
         }
         return request.getRemoteAddr();
-    }
-
-    private long entityIdOf(int versionNo, String filePath) {
-        ResumeFile inserted = resumeFileMapper.selectOne(new LambdaQueryWrapper<ResumeFile>()
-                .eq(ResumeFile::getVersionNo, versionNo)
-                .eq(ResumeFile::getFilePath, filePath)
-                .last("LIMIT 1"));
-        return inserted == null ? 0 : inserted.getId();
-    }
-
-    private Path uploadRootPath(String relative) {
-        return Path.of(uploadRoot).resolve(relative).normalize();
-    }
-
-    private void deleteFileQuietly(Path path) {
-        try {
-            Files.deleteIfExists(path);
-        } catch (IOException e) {
-            log.warn("物理文件删除失败（记录已删）: {}", path);
-        }
     }
 
     private ResumeVersionDTO toVersionDTO(ResumeFile entity) {

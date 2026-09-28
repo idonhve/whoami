@@ -7,13 +7,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -58,20 +54,12 @@ class ResumeApiIT {
             .withUsername("whoami")
             .withPassword("whoami-test");
 
-    private static Path uploadDir;
-
     @DynamicPropertySource
     static void datasourceProps(DynamicPropertyRegistry registry) {
-        try {
-            uploadDir = Files.createTempDirectory("resume-it");
-        } catch (IOException e) {
-            throw new IllegalStateException("创建测试上传目录失败", e);
-        }
         registry.add("spring.datasource.url", MYSQL::getJdbcUrl);
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
         registry.add("app.jwt.secret", () -> TEST_SECRET);
-        registry.add("app.upload-dir", () -> uploadDir.toString());
     }
 
     @Autowired
@@ -81,16 +69,10 @@ class ResumeApiIT {
     private JdbcTemplate jdbc;
 
     @AfterAll
-    static void cleanup(@Autowired JdbcTemplate jdbc) throws IOException {
+    static void cleanup(@Autowired JdbcTemplate jdbc) {
         jdbc.update("DELETE FROM track_event");
         jdbc.update("DELETE FROM resume_file");
-        if (uploadDir != null && Files.exists(uploadDir)) {
-            try (Stream<Path> paths = Files.walk(uploadDir)) {
-                for (Path p : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
-                    Files.deleteIfExists(p);
-                }
-            }
-        }
+        jdbc.update("DELETE FROM upload_blob");
     }
 
     /** 仿真实 PDF：魔数 %PDF- 开头 */
@@ -155,10 +137,9 @@ class ResumeApiIT {
                 "SELECT COUNT(*) FROM track_event WHERE event_type = 'resume_download'", Integer.class);
     }
 
-    private long pdfFileCount() throws IOException {
-        try (Stream<Path> files = Files.list(uploadDir.resolve("resume"))) {
-            return files.filter(p -> p.toString().endsWith(".pdf")).count();
-        }
+    private long pdfFileCount() {
+        return jdbc.queryForObject(
+                "SELECT COUNT(*) FROM upload_blob WHERE file_path LIKE 'resume/%'", Long.class);
     }
 
     @Test
@@ -236,7 +217,7 @@ class ResumeApiIT {
 
     @Test
     @Order(4)
-    void fourUploadsKeepThreeAndEvictOldest() throws IOException {
+    void fourUploadsKeepThreeAndEvictOldest() {
         String token = login();
         byte[] v4 = pdf("v4");
 
@@ -295,7 +276,7 @@ class ResumeApiIT {
 
     @Test
     @Order(6)
-    void ownerNameChangeReflectedInNewUpload() throws IOException {
+    void ownerNameChangeReflectedInNewUpload() {
         String token = login();
         ResponseEntity<String> put = rest.exchange(
                 "/admin/api/site-config/owner_name", HttpMethod.PUT,

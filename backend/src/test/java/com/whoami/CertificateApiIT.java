@@ -5,10 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -36,7 +35,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Spec 08 契约集成测试：真实图片字节 multipart 上传 → 缩略图/压缩原图产物 + 公开列表 + 排序 +
- * 校验 400 + 删除清理物理文件 + /uploads/** 静态访问 + 未登录 401。
+ * 校验 400 + 删除清理内容行 + /uploads/** 只读接口 + 未登录 401。
  */
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -46,7 +45,6 @@ class CertificateApiIT {
     private static final String TEST_SECRET = "it-test-jwt-secret-0123456789abcdef-0123";
     private static final String ADMIN_PASSWORD = "Admin@whoami2026";
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final Path UPLOAD_DIR = createTempUploadDir();
 
     @Container
     static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
@@ -66,29 +64,12 @@ class CertificateApiIT {
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
         registry.add("app.jwt.secret", () -> TEST_SECRET);
-        registry.add("app.upload-dir", () -> UPLOAD_DIR.toString());
     }
 
     @AfterAll
-    static void cleanup(@Autowired JdbcTemplate jdbc) throws IOException {
+    static void cleanup(@Autowired JdbcTemplate jdbc) {
         jdbc.update("DELETE FROM certificate");
-        try (var paths = Files.walk(UPLOAD_DIR)) {
-            paths.sorted(java.util.Comparator.reverseOrder()).forEach(path -> {
-                try {
-                    Files.deleteIfExists(path);
-                } catch (IOException ignored) {
-                    // 临时目录清理失败不影响测试结论
-                }
-            });
-        }
-    }
-
-    private static Path createTempUploadDir() {
-        try {
-            return Files.createTempDirectory("whoami-cert-it");
-        } catch (IOException e) {
-            throw new IllegalStateException("临时上传目录创建失败", e);
-        }
+        jdbc.update("DELETE FROM upload_blob");
     }
 
     @Test
@@ -103,23 +84,23 @@ class CertificateApiIT {
         long id = json(created).path("data").path("id").asLong();
         assertThat(id).isPositive();
 
-        // 落库相对路径 + 物理文件存在
+        // 落库相对路径 + 内容行存在
         String originalFile = jdbc.queryForObject(
                 "SELECT original_file FROM certificate WHERE id = ?", String.class, id);
         String thumbnailFile = jdbc.queryForObject(
                 "SELECT thumbnail_file FROM certificate WHERE id = ?", String.class, id);
-        Path original = UPLOAD_DIR.resolve(originalFile);
-        Path thumbnail = UPLOAD_DIR.resolve(thumbnailFile);
+        byte[] originalBytes = blobBytes(originalFile);
+        byte[] thumbnailBytes = blobBytes(thumbnailFile);
         assertThat(originalFile).startsWith("certificate/").endsWith(".webp");
         assertThat(thumbnailFile).startsWith("certificate/").endsWith(".webp");
-        assertThat(original).exists();
-        assertThat(thumbnail).exists();
+        assertThat(originalBytes).isNotEmpty();
+        assertThat(thumbnailBytes).isNotEmpty();
 
         // 缩略图约 400px 宽；压缩原图长边 ≤ 2000px；缩略图体积显著更小
-        assertThat(ImageIO.read(thumbnail.toFile()).getWidth()).isEqualTo(400);
-        BufferedImage compressed = ImageIO.read(original.toFile());
+        assertThat(ImageIO.read(new ByteArrayInputStream(thumbnailBytes)).getWidth()).isEqualTo(400);
+        BufferedImage compressed = ImageIO.read(new ByteArrayInputStream(originalBytes));
         assertThat(Math.max(compressed.getWidth(), compressed.getHeight())).isLessThanOrEqualTo(2000);
-        assertThat(Files.size(thumbnail) * 3).isLessThan(Files.size(original));
+        assertThat(thumbnailBytes.length * 3).isLessThan(originalBytes.length);
 
         // 公开列表给出 /uploads/** 地址，且该地址可只读访问到真实图片字节
         ResponseEntity<String> list = rest.getForEntity("/api/certificates", String.class);
@@ -132,7 +113,7 @@ class CertificateApiIT {
 
         ResponseEntity<byte[]> served = rest.getForEntity(item.path("thumbUrl").asText(), byte[].class);
         assertThat(served.getStatusCode().value()).isEqualTo(200);
-        assertThat(served.getBody()).isEqualTo(Files.readAllBytes(thumbnail));
+        assertThat(served.getBody()).isEqualTo(thumbnailBytes);
     }
 
     @Test
@@ -196,17 +177,15 @@ class CertificateApiIT {
 
     @Test
     @Order(5)
-    void deleteRemovesRecordAndPhysicalFiles() throws IOException {
+    void deleteRemovesRecordAndContentRows() throws IOException {
         String token = login();
         long id = createCertificate(token, "待删除", "2023-03-03");
         String originalFile = jdbc.queryForObject(
                 "SELECT original_file FROM certificate WHERE id = ?", String.class, id);
         String thumbnailFile = jdbc.queryForObject(
                 "SELECT thumbnail_file FROM certificate WHERE id = ?", String.class, id);
-        Path original = UPLOAD_DIR.resolve(originalFile);
-        Path thumbnail = UPLOAD_DIR.resolve(thumbnailFile);
-        assertThat(original).exists();
-        assertThat(thumbnail).exists();
+        assertThat(blobBytes(originalFile)).isNotEmpty();
+        assertThat(blobBytes(thumbnailFile)).isNotEmpty();
 
         ResponseEntity<String> deleted = rest.exchange(
                 "/admin/api/certificates/" + id, HttpMethod.DELETE, withToken(token), String.class);
@@ -214,8 +193,9 @@ class CertificateApiIT {
         assertThat(deleted.getStatusCode().value()).isEqualTo(200);
         assertThat(jdbc.queryForObject(
                 "SELECT COUNT(*) FROM certificate WHERE id = ?", Integer.class, id)).isZero();
-        assertThat(original).doesNotExist();
-        assertThat(thumbnail).doesNotExist();
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM upload_blob WHERE file_path IN (?, ?)",
+                Integer.class, originalFile, thumbnailFile)).isZero();
     }
 
     @Test
@@ -240,6 +220,11 @@ class CertificateApiIT {
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         assertThat(rest.exchange("/admin/api/certificates", HttpMethod.POST,
                 new HttpEntity<>(body, headers), String.class).getStatusCode().value()).isEqualTo(401);
+    }
+
+    private byte[] blobBytes(String filePath) {
+        return jdbc.queryForObject(
+                "SELECT content FROM upload_blob WHERE file_path = ?", byte[].class, filePath);
     }
 
     private long createCertificate(String token, String name, String obtainedAt) throws IOException {

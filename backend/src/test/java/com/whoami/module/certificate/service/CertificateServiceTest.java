@@ -3,6 +3,8 @@ package com.whoami.module.certificate.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,6 +15,7 @@ import com.whoami.module.certificate.dto.UpdateCertificateRequest;
 import com.whoami.module.certificate.entity.Certificate;
 import com.whoami.module.certificate.mapper.CertificateMapper;
 import com.whoami.module.certificate.service.CertificateImageProcessor.ProcessedImage;
+import com.whoami.module.upload.service.UploadBlobService;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -27,14 +30,17 @@ import org.springframework.web.multipart.MultipartFile;
 @ExtendWith(MockitoExtension.class)
 class CertificateServiceTest {
 
-    private static final ProcessedImage PROCESSED =
-            new ProcessedImage("certificate/abc.webp", "certificate/abc_thumb.webp");
+    private static final ProcessedImage PROCESSED = new ProcessedImage(
+            "certificate/abc.webp", "certificate/abc_thumb.webp", "image/webp", new byte[] {1}, new byte[] {2});
 
     @Mock
     private CertificateMapper certificateMapper;
 
     @Mock
     private CertificateImageProcessor imageProcessor;
+
+    @Mock
+    private UploadBlobService uploadBlobService;
 
     @InjectMocks
     private CertificateService certificateService;
@@ -92,6 +98,9 @@ class CertificateServiceTest {
         assertThat(inserted.getThumbnailFile()).isEqualTo(PROCESSED.thumbnailFile());
         // sortOrder 交由 DB 默认值 0，新建项默认排在末尾（按获取时间倒序）
         assertThat(inserted.getSortOrder()).isNull();
+        // 产物字节先落 upload_blob，再写记录
+        verify(uploadBlobService).store(eq("certificate/abc.webp"), eq("image/webp"), eq(new byte[] {1}));
+        verify(uploadBlobService).store(eq("certificate/abc_thumb.webp"), eq("image/webp"), eq(new byte[] {2}));
     }
 
     @Test
@@ -114,6 +123,7 @@ class CertificateServiceTest {
 
         verify(imageProcessor, never()).process(any());
         verify(certificateMapper, never()).insert(any(Certificate.class));
+        verify(uploadBlobService, never()).store(anyString(), anyString(), any());
     }
 
     @Test
@@ -135,14 +145,15 @@ class CertificateServiceTest {
     }
 
     @Test
-    void createCleansUpFilesWhenInsertFails() {
+    void createCleansUpStoredBlobsWhenInsertFails() {
         when(imageProcessor.process(any())).thenReturn(PROCESSED);
         when(certificateMapper.insert(any(Certificate.class))).thenThrow(new IllegalStateException("db down"));
 
         assertThatThrownBy(() -> certificateService.create(file(), "软考", "2025-06-01"))
                 .isInstanceOf(IllegalStateException.class);
 
-        verify(imageProcessor).delete(PROCESSED.originalFile(), PROCESSED.thumbnailFile());
+        verify(uploadBlobService).delete("certificate/abc.webp");
+        verify(uploadBlobService).delete("certificate/abc_thumb.webp");
     }
 
     @Test
@@ -176,18 +187,19 @@ class CertificateServiceTest {
     }
 
     @Test
-    void deleteRemovesRecordAndPhysicalFiles() {
+    void deleteRemovesRecordAndStoredBlobs() {
         Certificate existing = certificate(5, "软考", LocalDate.of(2025, 6, 1), 0);
         when(certificateMapper.selectById(5L)).thenReturn(existing);
 
         certificateService.delete(5L);
 
         verify(certificateMapper).deleteById(5L);
-        verify(imageProcessor).delete("certificate/5.webp", "certificate/5_thumb.webp");
+        verify(uploadBlobService).delete("certificate/5.webp");
+        verify(uploadBlobService).delete("certificate/5_thumb.webp");
     }
 
     @Test
-    void deleteUnknownIdThrows404WithoutDeletingFiles() {
+    void deleteUnknownIdThrows404WithoutDeletingBlobs() {
         when(certificateMapper.selectById(99L)).thenReturn(null);
 
         assertThatThrownBy(() -> certificateService.delete(99L))
@@ -195,6 +207,6 @@ class CertificateServiceTest {
                 .satisfies(e -> assertThat(((BizException) e).getStatus()).isEqualTo(404));
 
         verify(certificateMapper, never()).deleteById(99L);
-        verify(imageProcessor, never()).delete(any());
+        verify(uploadBlobService, never()).delete(anyString());
     }
 }

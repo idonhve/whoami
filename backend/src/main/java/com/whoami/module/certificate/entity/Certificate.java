@@ -17,7 +17,7 @@ public class Certificate {
 
     private LocalDate obtainedAt;
 
-    /** 压缩原图相对路径（相对 app.upload-dir，如 certificate/xxx.webp） */
+    /** 压缩原图存储路径（upload_blob 表 file_path，如 certificate/xxx.webp） */
     private String originalFile;
 
     /** 缩略图相对路径 */

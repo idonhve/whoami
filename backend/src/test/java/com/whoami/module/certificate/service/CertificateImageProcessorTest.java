@@ -4,38 +4,32 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.whoami.common.BizException;
-import com.whoami.config.AppProperties;
 import com.whoami.module.certificate.service.CertificateImageProcessor.ProcessedImage;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Random;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 图片处理验收（Spec 08）：真实图片字节断言缩略图/压缩原图产物、魔数校验、体积上限。
- * 不依赖 Spring 容器与数据库。
+ * 不依赖 Spring 容器与数据库；产物为内存字节（存 DB 由 CertificateService 负责）。
  */
 class CertificateImageProcessorTest {
 
     private static final int SOURCE_WIDTH = 2400;
     private static final int SOURCE_HEIGHT = 1600;
 
-    @TempDir
-    Path uploadDir;
-
     private CertificateImageProcessor processor;
 
     @BeforeEach
     void setUp() {
-        processor = new CertificateImageProcessor(new AppProperties(uploadDir.toString()));
+        processor = new CertificateImageProcessor();
     }
 
     @Test
@@ -44,19 +38,15 @@ class CertificateImageProcessorTest {
 
         ProcessedImage processed = processor.process(upload("cert.jpg", "image/jpeg", source));
 
-        Path thumbnail = uploadDir.resolve(processed.thumbnailFile());
-        Path original = uploadDir.resolve(processed.originalFile());
-        assertThat(thumbnail).exists();
-        assertThat(original).exists();
-        // 产物为 WebP（RIFF....WEBP 魔数），且落在 uploads 卷 certificate/ 目录
+        // 产物为 WebP（RIFF....WEBP 魔数），路径落在 certificate/ 目录
         assertThat(processed.thumbnailFile()).startsWith("certificate/").endsWith(".webp");
         assertThat(processed.originalFile()).startsWith("certificate/").endsWith(".webp");
-        assertThat(isWebp(Files.readAllBytes(thumbnail))).isTrue();
-        assertThat(isWebp(Files.readAllBytes(original))).isTrue();
+        assertThat(isWebp(processed.thumbnail())).isTrue();
+        assertThat(isWebp(processed.original())).isTrue();
 
         // 缩略图约 400px 宽；压缩原图长边压到 ≤ 2000px
-        BufferedImage thumbImage = ImageIO.read(thumbnail.toFile());
-        BufferedImage originalImage = ImageIO.read(original.toFile());
+        BufferedImage thumbImage = ImageIO.read(new ByteArrayInputStream(processed.thumbnail()));
+        BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(processed.original()));
         assertThat(thumbImage.getWidth()).isEqualTo(CertificateImageProcessor.THUMB_WIDTH);
         assertThat(thumbImage.getHeight())
                 .isEqualTo(Math.round(SOURCE_HEIGHT * ((double) CertificateImageProcessor.THUMB_WIDTH / SOURCE_WIDTH)));
@@ -64,9 +54,7 @@ class CertificateImageProcessorTest {
                 .isEqualTo(CertificateImageProcessor.MAX_LONG_EDGE);
 
         // 缩略图体积显著小于压缩原图
-        long thumbBytes = Files.size(thumbnail);
-        long originalBytes = Files.size(original);
-        assertThat(thumbBytes * 3).isLessThan(originalBytes);
+        assertThat(processed.thumbnail().length * 3).isLessThan(processed.original().length);
     }
 
     @Test
@@ -77,8 +65,8 @@ class CertificateImageProcessorTest {
         ProcessedImage fromPng = processor.process(upload("scan.png", "image/png", png));
         ProcessedImage fromWebp = processor.process(upload("scan.webp", "image/webp", webp));
 
-        assertThat(uploadDir.resolve(fromPng.thumbnailFile())).exists();
-        assertThat(uploadDir.resolve(fromWebp.thumbnailFile())).exists();
+        assertThat(isWebp(fromPng.thumbnail())).isTrue();
+        assertThat(isWebp(fromWebp.thumbnail())).isTrue();
     }
 
     @Test
@@ -87,7 +75,7 @@ class CertificateImageProcessorTest {
 
         ProcessedImage processed = processor.process(upload("tiny.jpg", "image/jpeg", source));
 
-        BufferedImage thumbnail = ImageIO.read(uploadDir.resolve(processed.thumbnailFile()).toFile());
+        BufferedImage thumbnail = ImageIO.read(new ByteArrayInputStream(processed.thumbnail()));
         assertThat(thumbnail.getWidth()).isEqualTo(200);
         assertThat(thumbnail.getHeight()).isEqualTo(150);
     }
@@ -143,21 +131,6 @@ class CertificateImageProcessorTest {
         assertThatThrownBy(() -> processor.process(upload("empty.jpg", "image/jpeg", new byte[0])))
                 .isInstanceOf(BizException.class)
                 .satisfies(e -> assertThat(((BizException) e).getStatus()).isEqualTo(400));
-    }
-
-    @Test
-    void deleteRemovesBothProductsAndIgnoresMissingFiles() throws IOException {
-        ProcessedImage processed = processor.process(
-                upload("cert.jpg", "image/jpeg", imageBytes(800, 600, "jpeg")));
-        Path thumbnail = uploadDir.resolve(processed.thumbnailFile());
-        Path original = uploadDir.resolve(processed.originalFile());
-
-        processor.delete(processed.originalFile(), processed.thumbnailFile());
-        assertThat(thumbnail).doesNotExist();
-        assertThat(original).doesNotExist();
-
-        // 重复删除 / 空值不抛异常
-        processor.delete(processed.originalFile(), null, "  ");
     }
 
     private static MultipartFile upload(String filename, String contentType, byte[] bytes) {

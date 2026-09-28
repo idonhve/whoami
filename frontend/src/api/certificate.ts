@@ -1,4 +1,5 @@
 import { ApiError, http, TOKEN_KEY } from '@/api/http'
+import { apiUrl } from '@/api/base'
 import type { ApiResult } from '@/types/api'
 
 /**
@@ -29,9 +30,14 @@ const ALLOWED_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'image/webp
 /** 单张上限 5MB（与后端校验一致） */
 export const CERT_MAX_SIZE_BYTES = 5 * 1024 * 1024
 
-/** 公开列表（后端已按 sortOrder 升序、obtainedAt 倒序排好） */
-export function fetchCertificates() {
-  return http.get<Certificate[]>('/api/certificates')
+/** 公开列表（后端已按 sortOrder 升序、obtainedAt 倒序排好）；/uploads 地址补全为后端基址 */
+export async function fetchCertificates(): Promise<Certificate[]> {
+  const list = await http.get<Certificate[]>('/api/certificates')
+  return list.map((item) => ({
+    ...item,
+    thumbUrl: apiUrl(item.thumbUrl),
+    imageUrl: apiUrl(item.imageUrl),
+  }))
 }
 
 /**
@@ -43,7 +49,7 @@ async function postForm<T>(path: string, form: FormData): Promise<T> {
   const headers: Record<string, string> = {}
   const token = localStorage.getItem(TOKEN_KEY)
   if (token) headers.Authorization = `Bearer ${token}`
-  const response = await fetch(path, { method: 'POST', headers, body: form })
+  const response = await fetch(apiUrl(path), { method: 'POST', headers, body: form })
 
   let body: ApiResult<T> | null = null
   try {

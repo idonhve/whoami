@@ -30,9 +30,9 @@ docker compose up -d --build
 | `backend` | Spring Boot 3（Java 17） | 8080（`BACKEND_PORT` 可覆盖） |
 | `mysql` | MySQL 8.0，数据落在 `mysql-data` 卷 | 3306（`DB_PORT` 可覆盖） |
 
-卷：`mysql-data`（数据库数据）、`uploads`（简历/证书文件，挂到后端 `/app/uploads`，Spec 07/08 使用）。
+卷：`mysql-data`（数据库数据）。上传文件（简历/证书图片）自 ADR-0004 起存数据库 `upload_blob` 表，不再依赖宿主卷。
 
-数据库表结构由 Flyway 自动迁移（`V1__init_schema.sql` 建齐 12 张表，`V2__init_seed.sql` 写入种子数据），无需手工执行 SQL。
+数据库表结构由 Flyway 自动迁移（`V1__init_schema.sql` 建齐 12 张表，`V2__init_seed.sql` 写入种子数据，`V3__upload_blob.sql` 建上传内容表），无需手工执行 SQL。
 
 ## 3. 初始管理员账号与首次改密
 
@@ -155,3 +155,66 @@ FLUSH PRIVILEGES;
 | 登录一直 401 | 密码不对（初始密码见第 3 节），或曾被锁（连续失败 5 次锁 10 分钟） |
 | 想重置数据库 | `docker compose down -v`（会删 MySQL 数据卷，慎用） |
 | 80 端口被占用 | `.env` 设 `HTTP_PORT=8080` 后重启栈 |
+
+## 9. 免费云部署（Render + TiDB Cloud，零成本方案）
+
+> 适用：不想买服务器也能公网访问。全免费，无需信用卡（GitHub 账号即可）。
+> 代价：后端 15 分钟无访问会休眠，首次唤醒约 30–60 秒（前端静态站不休眠，页面秒开）。
+
+### 9.1 架构
+
+| 层 | 平台 / 档位 | 地址 |
+| --- | --- | --- |
+| 前端静态站 | Render **static site**（免费，CDN，不休眠） | `https://<name>.onrender.com` |
+| 后端 API | Render **free web service**（Docker，512MB，会休眠） | `https://<name>.onrender.com` |
+| 数据库 | **TiDB Cloud Starter** 免费集群（MySQL 8 兼容，25GiB） | TLS 4000 端口直连 |
+
+关键适配（均已实现，无需改代码）：
+
+- 上传文件存 DB（ADR-0004）——Render 磁盘易失；
+- 前端 `VITE_API_BASE` 注入后端地址（跨域），后端 `CORS_ALLOWED_ORIGINS` 放行前端来源；
+- 根目录 `render.yaml` 为部署蓝图（服务清单与环境变量一览）。
+
+### 9.2 建库（TiDB Cloud）
+
+1. 注册 [tidbcloud.com](https://tidbcloud.com)（GitHub 登录，无需信用卡）；
+2. 创建 **Starter** 集群（区域选 Tokyo / Singapore），生成密码并保存；
+3. 用 SQL Editor（或任意 mysql 客户端）建库：`CREATE DATABASE IF NOT EXISTS whoami;`
+4. 从连接对话框取 JDBC 串（形如 `jdbc:mysql://gateway01.xxx.tidbcloud.com:4000/whoami?sslMode=VERIFY_IDENTITY&enabledTLSProtocols=TLSv1.2,TLSv1.3`）。建表由后端 Flyway 自动完成。
+
+### 9.3 部署后端（Render web service）
+
+1. 注册 [render.com](https://render.com)，New → **Web Service**，选择 **Public Git repository** 粘贴本仓库地址；
+2. Region 选 Singapore；Runtime 选 **Docker**（自动识别根目录 `Dockerfile`）；Instance Type 选 **Free**；
+3. 环境变量：
+
+| 键 | 值 |
+| --- | --- |
+| `DB_URL` | 9.2 的 JDBC 串（库名换成 `whoami`） |
+| `DB_USER` / `DB_PASSWORD` | TiDB 连接账号 / 密码 |
+| `JWT_SECRET` | ≥ 32 字符随机串 |
+| `CORS_ALLOWED_ORIGINS` | 前端静态站地址（下一步建好后回填） |
+| `JAVA_OPTS` | `-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Xss512k` |
+| `DB_POOL_MAX=6`、`DB_POOL_MIN_IDLE=2`、`TOMCAT_THREADS_MAX=50` | 512MB 内存适配 |
+
+4. Deploy 后验证 `https://<后端>.onrender.com/admin/api/health` 返回 `{"data":{"status":"up"}}`（首次构建约 10–15 分钟）。
+
+### 9.4 部署前端（Render static site）
+
+1. New → **Static Site**，同一个仓库；
+2. Root Directory：`frontend`；Build Command：`npm ci && npm run build`；Publish Directory：`dist`；
+3. 环境变量 `VITE_API_BASE=https://<后端>.onrender.com`（结尾不带斜杠）；
+4. SPA 路由回退由 `frontend/public/_redirects` 自动生效。
+
+### 9.5 上线必做
+
+- **改管理员密码**（第 3 节）：用 mysql 客户端连 TiDB 执行同样的 UPDATE；
+- 管理后台 → 站点配置：`domain` 改为前端实际地址（开机日志显示用）；
+- 访问前端地址全站冒烟：首页数据、`/awards` 图片、简历下载、`/admin` 登录。
+
+### 9.6 注意事项
+
+- 免费层构建无缓存，每次部署约 10–15 分钟属正常；
+- 后端休眠后首个请求慢（唤醒），介意可用 cron-job.org 免费定时 ping（注意这是灰色手段，有封号风险，自行斟酌）；
+- 仓库公开且初始密码公开，**改密是硬性要求**；
+- 想升级到境内服务器 + 域名 + 备案，回到本文档第 1–8 节流程即可，代码零改动。

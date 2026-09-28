@@ -6,7 +6,7 @@ import com.whoami.module.resume.dto.ResumeLatestDTO;
 import com.whoami.module.resume.service.ResumeService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
-import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -42,6 +42,6 @@ public class ResumePublicController {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
-                .body(new FileSystemResource(target.path()));
+                .body(new ByteArrayResource(target.content()));
     }
 }

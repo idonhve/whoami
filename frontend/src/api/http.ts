@@ -1,3 +1,4 @@
+import { apiUrl } from '@/api/base'
 import type { ApiResult } from '@/types/api'
 
 export const TOKEN_KEY = 'whoami_admin_token'
@@ -28,7 +29,7 @@ function tryRefreshToken(): Promise<boolean> {
       const token = localStorage.getItem(TOKEN_KEY)
       if (!token) return false
       try {
-        const response = await fetch(REFRESH_PATH, {
+        const response = await fetch(apiUrl(REFRESH_PATH), {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -75,7 +76,7 @@ async function doFetch(path: string, options: RequestInit): Promise<Response> {
   if (options.body !== undefined && !(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json'
   }
-  return fetch(path, { ...options, headers })
+  return fetch(apiUrl(path), { ...options, headers })
 }
 
 async function request<T>(path: string, options: RequestInit = {}, allowRefreshRetry = true): Promise<T> {

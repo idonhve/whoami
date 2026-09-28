@@ -7,6 +7,7 @@ import com.whoami.module.certificate.dto.UpdateCertificateRequest;
 import com.whoami.module.certificate.entity.Certificate;
 import com.whoami.module.certificate.mapper.CertificateMapper;
 import com.whoami.module.certificate.service.CertificateImageProcessor.ProcessedImage;
+import com.whoami.module.upload.service.UploadBlobService;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -14,8 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * 证书 CRUD（Spec 08）：上传即生成缩略图 + 压缩原图，删除时物理文件一并清理。
- * 图片产物落 uploads 卷，经 /uploads/** 只读静态映射对外暴露。
+ * 证书 CRUD（Spec 08）：上传即生成缩略图 + 压缩原图，删除时内容行一并清理。
+ * 图片产物存 upload_blob（容器平台磁盘易失），经 /uploads/** 只读接口对外暴露。
  */
 @Service
 public class CertificateService {
@@ -27,10 +28,13 @@ public class CertificateService {
 
     private final CertificateMapper certificateMapper;
     private final CertificateImageProcessor imageProcessor;
+    private final UploadBlobService uploadBlobService;
 
-    public CertificateService(CertificateMapper certificateMapper, CertificateImageProcessor imageProcessor) {
+    public CertificateService(CertificateMapper certificateMapper, CertificateImageProcessor imageProcessor,
+                              UploadBlobService uploadBlobService) {
         this.certificateMapper = certificateMapper;
         this.imageProcessor = imageProcessor;
+        this.uploadBlobService = uploadBlobService;
     }
 
     /** 前台列表：sortOrder 升序，其次 obtainedAt 倒序 */
@@ -47,6 +51,8 @@ public class CertificateService {
         String validName = requireName(name);
         LocalDate validObtainedAt = requireObtainedAt(obtainedAt);
         ProcessedImage processed = imageProcessor.process(file);
+        uploadBlobService.store(processed.originalFile(), processed.contentType(), processed.original());
+        uploadBlobService.store(processed.thumbnailFile(), processed.contentType(), processed.thumbnail());
 
         Certificate entity = new Certificate();
         entity.setName(validName);
@@ -56,8 +62,9 @@ public class CertificateService {
         try {
             certificateMapper.insert(entity);
         } catch (RuntimeException e) {
-            // 入库失败则清理刚落盘的图片，避免孤儿文件
-            imageProcessor.delete(processed.originalFile(), processed.thumbnailFile());
+            // 入库失败则清理刚存的内容行，避免孤儿文件
+            uploadBlobService.delete(processed.originalFile());
+            uploadBlobService.delete(processed.thumbnailFile());
             throw e;
         }
         return entity.getId();
@@ -87,7 +94,8 @@ public class CertificateService {
             throw new BizException(404, "证书不存在: " + id);
         }
         certificateMapper.deleteById(id);
-        imageProcessor.delete(existing.getOriginalFile(), existing.getThumbnailFile());
+        uploadBlobService.delete(existing.getOriginalFile());
+        uploadBlobService.delete(existing.getThumbnailFile());
     }
 
     private CertificateDTO toDTO(Certificate entity) {

@@ -3,15 +3,18 @@
  * 不可用或入队失败时退回 keepalive fetch。任何失败一律静默——埋点绝不影响业务。
  */
 
+import { apiUrl } from '@/api/base'
+
 /** sendBeacon 优先的 JSON 上报；失败静默 */
 export function sendBeaconJson(url: string, payload: unknown): void {
   try {
     const body = JSON.stringify(payload)
+    const target = apiUrl(url)
     if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-      const queued = navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }))
+      const queued = navigator.sendBeacon(target, new Blob([body], { type: 'application/json' }))
       if (queued) return
     }
-    void fetch(url, {
+    void fetch(target, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,

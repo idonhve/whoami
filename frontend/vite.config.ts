@@ -18,6 +18,7 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:8080',
       '/admin/api': 'http://localhost:8080',
+      '/uploads': 'http://localhost:8080',
     },
   },
   build: {

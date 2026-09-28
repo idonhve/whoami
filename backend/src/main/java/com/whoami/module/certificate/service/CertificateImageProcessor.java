@@ -1,15 +1,12 @@
 package com.whoami.module.certificate.service;
 
 import com.whoami.common.BizException;
-import com.whoami.config.AppProperties;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.UUID;
 import javax.imageio.ImageIO;
 import net.coobird.thumbnailator.Thumbnails;
@@ -21,7 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * 证书图片处理（Spec 08）：上传原图 → 缩略图（约 400px 宽，前台网格）+ 压缩原图（长边 ≤ 2000px，灯箱）。
  * 产物一律 WebP（体积最优）；运行环境无 WebP 编码器时回退 JPEG。
- * 存储于 uploads 卷 certificate/ 目录，文件名用 UUID，原图文件名不落库、不外露。
+ * 输出为内存字节（由 CertificateService 存 upload_blob，容器平台磁盘易失不落盘），文件名用 UUID 不外露原名。
  */
 @Component
 public class CertificateImageProcessor {
@@ -41,20 +38,13 @@ public class CertificateImageProcessor {
     private static final float THUMB_QUALITY = 0.8f;
     private static final float IMAGE_QUALITY = 0.85f;
 
-    private final Path uploadRoot;
-    private final Path certificateDir;
-
-    public CertificateImageProcessor(AppProperties appProperties) {
-        this.uploadRoot = Paths.get(appProperties.uploadDir()).toAbsolutePath().normalize();
-        this.certificateDir = uploadRoot.resolve(DIR_NAME);
-    }
-
-    /** 落盘产物：相对 app.upload-dir 的路径（正斜杠，可直接拼 /uploads/ 供前台访问） */
-    public record ProcessedImage(String originalFile, String thumbnailFile) {
+    /** 内存产物：存储相对路径 + 内容类型 + 字节体（正斜杠路径可直接拼 /uploads/ 供前台访问） */
+    public record ProcessedImage(
+            String originalFile, String thumbnailFile, String contentType, byte[] original, byte[] thumbnail) {
     }
 
     /**
-     * 校验并处理上传图片。校验失败抛 400；处理/落盘失败抛 500。
+     * 校验并处理上传图片。校验失败抛 400；处理/编码失败抛 500。
      */
     public ProcessedImage process(MultipartFile file) {
         byte[] bytes = readBytes(file);
@@ -65,42 +55,25 @@ public class CertificateImageProcessor {
 
         String format = ImageIO.getImageWritersByFormatName(WEBP).hasNext() ? WEBP : JPEG;
         String extension = WEBP.equals(format) ? "webp" : "jpg";
+        String contentType = WEBP.equals(format) ? "image/webp" : "image/jpeg";
         String base = UUID.randomUUID().toString().replace("-", "");
 
         try {
-            Files.createDirectories(certificateDir);
-            Path thumbnail = certificateDir.resolve(base + "_thumb." + extension);
-            Path original = certificateDir.resolve(base + "." + extension);
-
             int[] thumbSize = fit(source.getWidth(), source.getHeight(), THUMB_WIDTH, Integer.MAX_VALUE);
-            encode(source, thumbSize, thumbnail, format, THUMB_QUALITY);
+            byte[] thumbnail = encode(source, thumbSize, format, THUMB_QUALITY);
 
             int[] imageSize = fit(source.getWidth(), source.getHeight(), MAX_LONG_EDGE, MAX_LONG_EDGE);
-            encode(source, imageSize, original, format, IMAGE_QUALITY);
+            byte[] original = encode(source, imageSize, format, IMAGE_QUALITY);
 
-            return new ProcessedImage(DIR_NAME + "/" + original.getFileName(), DIR_NAME + "/" + thumbnail.getFileName());
+            return new ProcessedImage(
+                    DIR_NAME + "/" + base + "." + extension,
+                    DIR_NAME + "/" + base + "_thumb." + extension,
+                    contentType,
+                    original,
+                    thumbnail);
         } catch (IOException e) {
             log.error("证书图片处理失败", e);
             throw new BizException(500, "图片处理失败");
-        }
-    }
-
-    /** 删除落盘产物（记录删除后调用；失败只告警，不回滚已删记录） */
-    public void delete(String... relativePaths) {
-        for (String relativePath : relativePaths) {
-            if (relativePath == null || relativePath.isBlank()) {
-                continue;
-            }
-            Path target = uploadRoot.resolve(relativePath).normalize();
-            if (!target.startsWith(uploadRoot)) {
-                log.warn("跳过非法路径的证书文件删除: {}", relativePath);
-                continue;
-            }
-            try {
-                Files.deleteIfExists(target);
-            } catch (IOException e) {
-                log.warn("证书文件删除失败: {} ({})", relativePath, e.getMessage());
-            }
         }
     }
 
@@ -137,13 +110,15 @@ public class CertificateImageProcessor {
         return new int[] {(int) Math.round(width * scale), (int) Math.round(height * scale)};
     }
 
-    private void encode(BufferedImage source, int[] size, Path dest, String format, float quality) throws IOException {
+    private byte[] encode(BufferedImage source, int[] size, String format, float quality) throws IOException {
         BufferedImage target = JPEG.equals(format) ? flattenAlpha(source) : source;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
         Thumbnails.of(target)
                 .size(size[0], size[1])
                 .outputFormat(format)
                 .outputQuality(quality)
-                .toFile(dest.toFile());
+                .toOutputStream(out);
+        return out.toByteArray();
     }
 
     /** JPEG 无 alpha 通道：透明区域先铺白，避免 PNG 转 JPEG 后出现黑块 */

@@ -23,7 +23,9 @@ services:
       start_period: 30s
 
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: whoami-backend
     restart: unless-stopped
     environment:
@@ -34,9 +36,6 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?请在 .env 中设置 DB_PASSWORD（复制 .env.example 为 .env）}
       JWT_SECRET: ${JWT_SECRET:?请在 .env 中设置 JWT_SECRET（至少 32 字符的随机串）}
       TZ: ${TZ:-Asia/Shanghai}
-      UPLOAD_DIR: /app/uploads
-    volumes:
-      - uploads:/app/uploads
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:
@@ -61,4 +60,3 @@ services:
 
 volumes:
   mysql-data:
-  uploads:

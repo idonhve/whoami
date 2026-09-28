@@ -1,4 +1,5 @@
 import { ApiError, TOKEN_KEY, http } from '@/api/http'
+import { apiUrl } from '@/api/base'
 import type { ApiResult } from '@/types/api'
 
 /**
@@ -24,7 +25,7 @@ export function getLatest() {
 }
 
 /** 公开下载地址（服务端生成 Content-Disposition 文件名并写 resume_download 埋点） */
-export const RESUME_DOWNLOAD_URL = '/api/resume/download'
+export const RESUME_DOWNLOAD_URL = apiUrl('/api/resume/download')
 
 /** 后台版本列表项（ResumeVersionDTO） */
 export interface ResumeVersion {
@@ -57,7 +58,7 @@ export async function uploadResume(file: File): Promise<UploadResult> {
   if (token) {
     headers.Authorization = `Bearer ${token}`
   }
-  const response = await fetch('/admin/api/resumes', { method: 'POST', headers, body: form })
+  const response = await fetch(apiUrl('/admin/api/resumes'), { method: 'POST', headers, body: form })
   let body: ApiResult<UploadResult> | null = null
   try {
     body = (await response.json()) as ApiResult<UploadResult>
