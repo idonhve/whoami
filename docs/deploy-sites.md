@@ -1,60 +1,47 @@
 # Sites 前端 + Render 后端 + TiDB 数据库
 
-> 当前已选择 Sites 前端 + Render 免费 Java 后端 + TiDB Starter 免费数据库。保留现有 Java 技术栈，不实施后端迁移。云端部署完成后不依赖电脑开机。
+本部署保留 Vue 3 和 Java 17 / Spring Boot。前端、后端、数据库均在云端运行，电脑关机后仍可访问。
 
-数据库已经创建：TiDB Cloud Starter，Singapore，月度支出上限为 0。现有站点内容、简历及证书文件已迁入云数据库，Flyway 已完成 V1–V3，TLS 和文件完整性校验通过。首次发布由代理使用已授权的官方 CLI 和 Sites 完成。
+## 云端资源
 
-## 1. 创建云数据库（需要站主账号）
+| 服务 | 配置 |
+| --- | --- |
+| 前端 | Codex Sites；身份见 `.openai/hosting.json`；SPA 路由回退；沿用站主私有访问范围 |
+| 后端 | [idonhve-whoami-api](https://idonhve-whoami-api.onrender.com)，Render Free，Singapore |
+| 后端控制台 | [Render 服务](https://dashboard.render.com/web/srv-dav66trncjis739dqsgg)；工作区 My Workspace |
+| 后端源码 | `https://github.com/idonhve/whoami`，分支 `codex/sites-render-deployment`，根目录 Dockerfile |
+| 数据库 | TiDB Cloud Starter，Singapore，集群 `idonhve-whoami`，库 `whoami`，月度支出上限 0 |
 
-打开 [TiDB Cloud](https://tidbcloud.com/)，注册或登录，创建 **Starter 免费实例**。保留零支出配置，不启用付费额度。区域尽量选靠近 Render Singapore 的可用区域。
+TiDB 已应用 Flyway V1–V3，现有站点内容已迁移。简历 PDF、证书原图及缩略图存入 `upload_blob`，读取内容与本地文件的 SHA-256 一致。上传文件不依赖 Render 的临时磁盘。
 
-在 SQL Editor 执行：
+## 凭据与运行配置
 
-```sql
-CREATE DATABASE IF NOT EXISTS whoami;
-```
+仓库根目录的 `.env.render` 存放云数据库配置、JWT 密钥及后端配置，`.env.admin` 存放云端管理员登录凭据。二者均被 Git 忽略，不能提交到源码或前端产物。云端管理员密码已在创建后端服务之前更换为随机值，不能恢复仓库种子的默认密码。
 
-在实例连接面板选择 Java / JDBC，获取连接串、用户名和密码。数据库必须允许 Render 连接；按 TiDB 连接面板配置网络访问，并保留 TLS 验证。
-
-填写仓库根目录 `.env.render` 中的 `DB_URL`、`DB_USER`、`DB_PASSWORD`。JDBC 串中的库名必须为 `whoami`。例如（主机及用户名必须使用面板返回的真实值）：
+Render 通过名为 `production.properties` 的 secret file 注入 `.env.render` 内容。运行时环境变量：
 
 ```dotenv
-DB_URL=jdbc:mysql://<数据库主机>:4000/whoami?sslMode=VERIFY_IDENTITY&enabledTLSProtocols=TLSv1.2,TLSv1.3
-DB_USER=<连接用户名>
-DB_PASSWORD=<连接密码>
+SPRING_CONFIG_IMPORT=optional:file:/etc/secrets/production.properties
+SERVER_PORT=10000
+JAVA_OPTS=-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Xss512k
 ```
 
-`.env.render` 被现有 `.gitignore` 排除，不提交到 Git，也不把密码发送到聊天。其余配置已准备，其中 JWT 密钥已随机生成。
+数据库连接保留 `sslMode=VERIFY_IDENTITY`。连接池上限 6、空闲连接 2、Tomcat 线程上限 50，适配免费实例。`CORS_ALLOWED_ORIGINS` 仅允许登记的 Sites 来源。修改 secret file 时需同步 Render 配置并重新部署，修改本地文件不会自动更新云端密钥。
 
-官方说明：[创建 TiDB Starter 实例](https://docs.pingcap.com/tidbcloud/create-tidb-cluster-serverless/?plan=starter)。
+## 后续发布
 
-## 2. 首次创建 Render Docker 后端
+后端配置为跟随 `codex/sites-render-deployment` 分支自动部署。推送后应检查 Render 构建日志与 `/admin/api/health`。
 
-Render 插件的创建工具不支持首次创建 Docker 服务，但已安装并校验的官方 Render CLI v2.28.0 支持创建，可以由代理直接配置，无需站主手工创建服务。代理已安装并校验 TiDB CLI，可在账号 OAuth 登录后直接创建免费数据库。控制台备用入口为 [创建 Web Service](https://dashboard.render.com/web/new)，配置如下：
+前端构建须传入 `VITE_API_BASE=https://idonhve-whoami-api.onrender.com`，运行 `node scripts/build-sites.mjs`，输出到根目录 `dist`。通过 Sites 技能的工作流推送准确源码、打包并发布，复用 `.openai/hosting.json` 中的 `project_id`，无需重新创建站点。数据库密码和 JWT 密钥仅存在于后端，不能传入前端构建。
 
-| 项目 | 值 |
-| --- | --- |
-| 工作区 | My Workspace |
-| Repository | `https://github.com/idonhve/whoami` |
-| Branch | `codex/sites-render-deployment` |
-| Name | `idonhve-whoami-api` |
-| Region | Singapore |
-| Language / Runtime | Docker |
-| Root Directory | 留空（仓库根目录） |
-| Dockerfile Path | `./Dockerfile` |
-| Instance Type | Free |
-| Health Check Path | `/admin/api/health` |
+Windows 发布使用 Codex 自带的 Node.js 和 Git；当前电脑的 Node.js 24.9.0 复制目录时出现原生崩溃，Codex 自带的 24.19.0 已验证可完成构建与复制。使用独立 Node.js 时可通过 `npm_execpath` 指定已安装的 `npm-cli.js`。Git 2.28 不支持工作流所需的 `--config-env`，Codex 自带的 Git 2.53 已通过源码准备检查。Git Bash 打包 Windows 盘符路径时设置 `TAR_OPTIONS=--force-local`。
 
-云配置保存在被 Git 忽略的 `.env.render`。通过 Render 的 secret file 注入 Spring Boot，密钥不作为命令行参数，也不进入镜像。使用 `SPRING_CONFIG_IMPORT=optional:file:/etc/secrets/production.properties` 导入该文件。`SERVER_PORT=10000` 和 `JAVA_OPTS` 作为非敏感运行时环境变量设置。无需创建 Render 前端静态服务，前端由 Sites 托管；`render.yaml` 已仅保留 Java 后端。
+首次后端发布已成功，健康接口、公开内容接口、管理员登录、简历下载、三个上传文件的内容完整性及 Sites 来源的 CORS 预检均通过。前端部署包已生成并验证；Sites 连接目前对原 `project_id` 返回 `project_not_found`，前端尚未发布。恢复创建站点时的账号和工作区后，继续原站点的推送与发布流程，不新建替代站点。
 
-服务会自动构建与启动，Flyway 自动校验数据库。云端管理员密码已在首次公开后端之前更换为随机值，登录凭据保存在被 Git 忽略的 `.env.admin`，不要提交或上传该文件。后续部署继续使用云数据库中的密码，不能恢复仓库种子的默认密码。
+Sites 新站点保持私有访问；如需让所有访客免登录访问，需由站主明确变更分享范围。
 
-官方说明：[Render Docker 部署](https://render.com/docs/docker)。
+## 免费服务行为
 
-## 3. 自动发布 Sites 前端
+Render Free 在闲置 15 分钟后休眠，下一次请求可能等待约一分钟唤醒。TiDB 月度支出上限为 0，达到免费额度后可能暂停服务，需要在控制台查看用量。
 
-站主只需完成账号登录授权。后续数据库创建、数据库账号配置、后端服务创建、部署检查、健康接口及跨域验证由代理执行；无需再次授权工作区。
-
-确认后端可用后，使用真实后端 HTTPS 地址设置前端构建变量 `VITE_API_BASE`，运行 `node scripts/build-sites.mjs` 重新构建并把 `frontend/dist` 输出复制到根目录 `dist`，使用 Sites 工作流推送、打包和发布，并确认成功后提供访问链接。站点沿用 `.openai/hosting.json` 中的身份，避免重复创建。Sites 静态配置启用 SPA 路由回退。
-
-当前登记的前端来源是 `https://idonhve-whoami.wiry-rose-5919.chatgpt.site`，仅用于 `CORS_ALLOWED_ORIGINS`；登记不代表该地址已经能访问。Sites 默认保持私有访问。若需要面向所有访客公开，应在发布前明确变更分享范围。
+参考：[Render 免费实例](https://render.com/docs/free)、[Render Docker 部署](https://render.com/docs/docker)、[TiDB Starter](https://docs.pingcap.com/tidbcloud/create-tidb-cluster-serverless/?plan=starter)。
