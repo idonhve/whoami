@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+production.properties
+.openai
+.workbuddy
+**/node_modules
+**/target
+**/dist
+**/.idea
+frontend
+design-system
+docs
+scripts
+*.log
