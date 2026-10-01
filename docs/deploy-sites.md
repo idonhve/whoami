@@ -6,7 +6,7 @@
 
 | 服务 | 配置 |
 | --- | --- |
-| 前端 | Codex Sites；身份见 `.openai/hosting.json`；SPA 路由回退；沿用站主私有访问范围 |
+| 前端 | [whoami Sites](https://idonhve-whoami-live.ambagowda929633355.chatgpt.site)；身份见 `.openai/hosting.json`；SPA 路由回退；站主私有访问范围 |
 | 后端 | [idonhve-whoami-api](https://idonhve-whoami-api.onrender.com)，Render Free，Singapore |
 | 后端控制台 | [Render 服务](https://dashboard.render.com/web/srv-dav66trncjis739dqsgg)；工作区 My Workspace |
 | 后端源码 | `https://github.com/idonhve/whoami`，分支 `codex/sites-render-deployment`，根目录 Dockerfile |
@@ -36,7 +36,7 @@ JAVA_OPTS=-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Xss512k
 
 Windows 发布使用 Codex 自带的 Node.js 和 Git；当前电脑的 Node.js 24.9.0 复制目录时出现原生崩溃，Codex 自带的 24.19.0 已验证可完成构建与复制。使用独立 Node.js 时可通过 `npm_execpath` 指定已安装的 `npm-cli.js`。Git 2.28 不支持工作流所需的 `--config-env`，Codex 自带的 Git 2.53 已通过源码准备检查。Git Bash 打包 Windows 盘符路径时设置 `TAR_OPTIONS=--force-local`。
 
-首次后端发布已成功，健康接口、公开内容接口、管理员登录、简历下载、三个上传文件的内容完整性及 Sites 来源的 CORS 预检均通过。前端部署包已生成并验证；Sites 连接目前对原 `project_id` 返回 `project_not_found`，前端尚未发布。恢复创建站点时的账号和工作区后，继续原站点的推送与发布流程，不新建替代站点。
+首次后端发布已成功，健康接口、公开内容接口、管理员登录、简历下载、三个上传文件的内容完整性及 Sites 来源的 CORS 预检均通过。原 Sites 身份在当前账号中不可访问；按站主后续重新部署的要求，已在当前账号发布新站点。`.openai/hosting.json` 保存新的准确身份，后续更新复用该站点，不重新注册。新站点的源码历史已与本仓库合并，可直接从本仓库进行后续 Sites 发布。
 
 Sites 新站点保持私有访问；如需让所有访客免登录访问，需由站主明确变更分享范围。
 
