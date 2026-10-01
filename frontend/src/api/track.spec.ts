@@ -1,0 +1,127 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import { trackEasterEgg, trackGithubIconClick, trackGithubOutbound } from '@/api/track'
+
+describe('github_outbound 埋点上报', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  it('点击外跳后向 /api/track/event 上报 github_outbound（sendBeacon 优先）', () => {
+    const beaconSpy = vi.fn().mockReturnValue(true)
+    Object.defineProperty(navigator, 'sendBeacon', {
+      value: beaconSpy,
+      configurable: true,
+    })
+
+    trackGithubOutbound('whoami-site')
+
+    expect(beaconSpy).toHaveBeenCalledTimes(1)
+    const [url, blob] = beaconSpy.mock.calls[0]
+    expect(url).toBe('/api/track/event')
+    expect(blob).toBeInstanceOf(Blob)
+    // payload 在 Blob 内，异步读取断言
+    return blob.text().then((text: string) => {
+      const payload = JSON.parse(text)
+      expect(payload.eventType).toBe('github_outbound')
+      expect(payload.detail).toBe('whoami-site')
+      expect(payload.pagePath).toBe('/')
+      expect(payload.sessionId).toMatch(/^[0-9a-f-]{36}$/)
+    })
+  })
+
+  it('无 sendBeacon 时退回 keepalive fetch，失败静默', async () => {
+    Object.defineProperty(navigator, 'sendBeacon', {
+      value: undefined,
+      configurable: true,
+    })
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false })
+    vi.stubGlobal('fetch', fetchMock)
+
+    trackGithubOutbound('cli-tool')
+
+    await vi.waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/track/event',
+        expect.objectContaining({ method: 'POST', keepalive: true }),
+      )
+    })
+  })
+
+  it('埋点异常不外抛（外跳不受影响）', () => {
+    Object.defineProperty(navigator, 'sendBeacon', {
+      value: vi.fn(() => {
+        throw new Error('beacon down')
+      }),
+      configurable: true,
+    })
+
+    expect(() => trackGithubOutbound('repo')).not.toThrow()
+  })
+})
+
+describe('页头/页脚图标外跳埋点（Spec 03）', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  it.each(['header', 'footer'] as const)('detail 带 %s 来源上报 github_outbound', async (source) => {
+    const beaconSpy = vi.fn().mockReturnValue(true)
+    Object.defineProperty(navigator, 'sendBeacon', {
+      value: beaconSpy,
+      configurable: true,
+    })
+
+    trackGithubIconClick(source)
+
+    expect(beaconSpy).toHaveBeenCalledTimes(1)
+    const [url, blob] = beaconSpy.mock.calls[0]
+    expect(url).toBe('/api/track/event')
+    const text = await (blob as Blob).text()
+    const payload = JSON.parse(text)
+    expect(payload.eventType).toBe('github_outbound')
+    expect(payload.detail).toEqual({ source })
+    expect(payload.pagePath).toBe('/')
+    expect(payload.sessionId).toMatch(/^[0-9a-f-]{36}$/)
+  })
+})
+
+describe('彩蛋埋点上报（Spec 11）', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  it('秘籍触发向 /api/track/event 上报 easter_egg，detail 带 type=konami', async () => {
+    const beaconSpy = vi.fn().mockReturnValue(true)
+    Object.defineProperty(navigator, 'sendBeacon', {
+      value: beaconSpy,
+      configurable: true,
+    })
+
+    trackEasterEgg('konami')
+
+    expect(beaconSpy).toHaveBeenCalledTimes(1)
+    const [url, blob] = beaconSpy.mock.calls[0]
+    expect(url).toBe('/api/track/event')
+    const text = await (blob as Blob).text()
+    const payload = JSON.parse(text)
+    expect(payload.eventType).toBe('easter_egg')
+    expect(payload.detail).toEqual({ type: 'konami' })
+    expect(payload.pagePath).toBe('/')
+    expect(payload.sessionId).toMatch(/^[0-9a-f-]{36}$/)
+  })
+
+  it('sendBeacon 抛异常时静默失败（埋点不影响彩蛋功能）', () => {
+    Object.defineProperty(navigator, 'sendBeacon', {
+      value: vi.fn(() => {
+        throw new Error('beacon down')
+      }),
+      configurable: true,
+    })
+
+    expect(() => trackEasterEgg('konami')).not.toThrow()
+  })
+})

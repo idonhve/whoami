@@ -1,0 +1,248 @@
+/* ============================================================
+   whoami 设计系统 — 终端 / 像素 / 赛博科技
+   像素字体只用于 ASCII 标识（logo、代码、编号），中文走等宽栈
+   （字体文件由 main.ts 导入：Press Start 2P + VT323）
+   ============================================================ */
+
+:root {
+  --bg: #04070b;
+  --bg-panel: #090f16;
+  --bg-raised: #0d151f;
+  --border: #16222f;
+  --border-bright: #24384d;
+  --text: #c8d6e5;
+  --text-dim: #64788f;
+  --green: #00ff9c;
+  --green-soft: rgba(0, 255, 156, 0.12);
+  --green-glow: rgba(0, 255, 156, 0.35);
+  --cyan: #2bd9ff;
+  --cyan-soft: rgba(43, 217, 255, 0.12);
+  --magenta: #ff2e88;
+  --amber: #ffb800;
+  --error: #ff3860;
+  --error-soft: rgba(255, 56, 96, 0.12);
+  --cyan-grid: rgba(43, 217, 255, 0.03);
+  /* GitHub 语言色点（F4 登记，取 linguist 官方主色；映射见 components/works/repoLanguages.ts） */
+  --lang-ts: #3178c6;
+  --lang-js: #f1e05a;
+  --lang-java: #b07219;
+  --lang-python: #3572a5;
+  --lang-go: #00add8;
+  --lang-rust: #dea584;
+  --lang-vue: #41b883;
+  --lang-html: #e34c26;
+  --lang-css: #563d7c;
+  --lang-c: #555555;
+  --lang-cpp: #f34b7d;
+  --lang-shell: #89e051;
+  --lang-kotlin: #a97bff;
+  --lang-swift: #f05138;
+  --lang-php: #4f5d95;
+  --lang-ruby: #701516;
+  --lang-fallback: var(--text-dim);
+  --font-pixel: 'Press Start 2P', 'Cascadia Code', Consolas, monospace;
+  --font-term: 'VT323', 'Cascadia Code', Consolas, monospace;
+  --font-mono: 'Cascadia Code', 'JetBrains Mono', Consolas, 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--green);
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--green);
+  color: var(--bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-bright);
+  border: 2px solid var(--bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--green);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+/* ---------- 像素风霓虹按钮 ---------- */
+
+.neon-btn {
+  display: inline-block;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--green);
+  padding: 14px 22px;
+  border: 2px solid var(--green);
+  background: rgba(0, 255, 156, 0.05);
+  text-shadow: 0 0 6px var(--green-glow);
+  box-shadow:
+    0 0 12px rgba(0, 255, 156, 0.12),
+    inset 0 0 12px rgba(0, 255, 156, 0.06);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    transform 0.15s;
+}
+
+.neon-btn:hover:not(:disabled) {
+  background: rgba(0, 255, 156, 0.13);
+  box-shadow:
+    0 0 22px rgba(0, 255, 156, 0.35),
+    inset 0 0 16px rgba(0, 255, 156, 0.1);
+  text-shadow:
+    2px 0 var(--magenta),
+    -2px 0 var(--cyan),
+    0 0 10px var(--green-glow);
+  transform: translateY(-1px);
+}
+
+.neon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* ---------- HUD 四角括号框（像素取景框） ---------- */
+
+.hud-frame {
+  --hud-c: var(--green);
+  --hud-len: 16px;
+  --hud-th: 2px;
+  --hud-inset: 14px;
+  position: absolute;
+  inset: var(--hud-inset);
+  pointer-events: none;
+  background:
+    linear-gradient(var(--hud-c), var(--hud-c)) left top / var(--hud-len) var(--hud-th) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) left top / var(--hud-th) var(--hud-len) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) right top / var(--hud-len) var(--hud-th) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) right top / var(--hud-th) var(--hud-len) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) left bottom / var(--hud-len) var(--hud-th) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) left bottom / var(--hud-th) var(--hud-len) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) right bottom / var(--hud-len) var(--hud-th) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) right bottom / var(--hud-th) var(--hud-len) no-repeat;
+  opacity: 0.55;
+}
+
+/* ---------- 像素进度条（steps 逐格推进） ---------- */
+
+.pixel-bar {
+  display: inline-block;
+  width: 196px;
+  height: 14px;
+  border: 2px solid var(--green);
+  padding: 1px;
+  box-shadow: 0 0 10px rgba(0, 255, 156, 0.25);
+}
+
+.pixel-bar > i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: repeating-linear-gradient(90deg, var(--green) 0 10px, transparent 10px 14px);
+  transform-origin: left;
+  transform: scaleX(0);
+  transition: transform 0.12s steps(4);
+}
+
+/* ---------- 终端风数据表（后台管理页通用，Spec 06 登记） ---------- */
+
+.term-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-panel);
+  border: 2px solid var(--border);
+  font-size: 13px;
+}
+
+.term-table th {
+  padding: 10px 12px;
+  text-align: left;
+  color: var(--text-dim);
+  font-weight: 400;
+  letter-spacing: 1px;
+  border-bottom: 2px solid var(--border-bright);
+  white-space: nowrap;
+}
+
+.term-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: top;
+  word-break: break-all;
+}
+
+.term-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.term-table tbody tr:hover td {
+  background: var(--green-soft);
+}
+
+/* ---------- 通用动效 ---------- */
+
+@keyframes cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes led-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
