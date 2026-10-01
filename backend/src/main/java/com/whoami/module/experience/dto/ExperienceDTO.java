@@ -10,8 +10,8 @@ public record ExperienceDTO(
         String title,
         LocalDate startDate,
         LocalDate endDate,
-        List<AchievementItem> achievements,
-        List<RadarItem> radar,
+        String companyIntro,
+        String projectIntro,
         List<String> techTags,
         List<String> highlights,
         Integer sortOrder) {

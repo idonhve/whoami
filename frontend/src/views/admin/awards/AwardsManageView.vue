@@ -6,6 +6,8 @@ import {
   createCertificate,
   deleteCertificate,
   fetchCertificates,
+  isPdfCertificate,
+  pdfPreviewUrl,
   updateCertificate,
   validateCertificateFile,
   type Certificate,
@@ -38,7 +40,7 @@ function onFileChange(event: Event) {
 }
 
 function validateUpload(): string | null {
-  if (!uploadFile.value) return '请选择图片文件'
+  if (!uploadFile.value) return '请选择证书图片或 PDF 文件'
   const fileProblem = validateCertificateFile(uploadFile.value)
   if (fileProblem) return fileProblem
   if (!uploadName.value.trim()) return '证书名称不能为空'
@@ -51,7 +53,7 @@ async function submitUpload() {
   if (uploading.value) return
   const problem = validateUpload()
   if (problem || !uploadFile.value) {
-    errorMsg.value = problem ?? '请选择图片文件'
+    errorMsg.value = problem ?? '请选择证书图片或 PDF 文件'
     return
   }
   uploading.value = true
@@ -174,12 +176,12 @@ onMounted(load)
     <form class="form" @submit.prevent="submitUpload">
       <div class="form-grid">
         <label class="field span-2">
-          <span>图片 *（jpg / jpeg / png / webp，单张 ≤ {{ maxSizeMb }}MB）</span>
+          <span>证书文件 *（jpg / jpeg / png / webp / pdf，单张 ≤ {{ maxSizeMb }}MB）</span>
           <input
             :key="fileInputKey"
             class="file-input"
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
             :disabled="uploading"
             @change="onFileChange"
           />
@@ -230,7 +232,15 @@ onMounted(load)
       <tbody>
         <tr v-for="item in list" :key="item.id">
           <td class="thumb-cell">
-            <img class="thumb-img" :src="item.thumbUrl" :alt="`缩略图：${item.name}`" loading="lazy" />
+            <iframe
+              v-if="isPdfCertificate(item)"
+              class="thumb-img pdf-thumb"
+              :src="pdfPreviewUrl(item.thumbUrl)"
+              :title="`PDF 预览：${item.name}`"
+              loading="lazy"
+              tabindex="-1"
+            />
+            <img v-else class="thumb-img" :src="item.thumbUrl" :alt="`缩略图：${item.name}`" loading="lazy" />
           </td>
           <td class="id">{{ item.id }}</td>
           <td class="name-cell">
@@ -440,6 +450,12 @@ onMounted(load)
   max-width: 64px;
   border: 1px solid var(--border);
   object-fit: cover;
+}
+
+.pdf-thumb {
+  width: 64px;
+  background: var(--bg-panel);
+  pointer-events: none;
 }
 
 .id {

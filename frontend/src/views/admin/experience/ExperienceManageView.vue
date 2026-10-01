@@ -9,29 +9,19 @@ import {
   type Experience,
   type ExperienceCreate,
 } from '@/api/experience'
-import { validateRadar } from '@/components/experience/experienceFormat'
 
 /**
- * 后台经历管理（Spec 09）：经历卡 CRUD（公司/职位/时间/战果数组/雷达维度数组/技术标签/展开要点/排序）。
- * 雷达维度可自定义 3~8 个，校验维度名 ≤20 不重复、score 0~100 整数；
- * techTags / highlights 以换行分隔输入，保存时拆成数组。
+ * 后台经历管理：公司介绍、项目介绍、技术标签与展开要点均由此维护。
+ * 多行内容按换行分隔，保存时将标签与展开要点拆成数组。
  */
-interface AchievementForm {
-  value: string
-  context: string
-}
-interface RadarForm {
-  dimension: string
-  score: number
-}
 interface ExForm {
   company: string
   title: string
   startDate: string
   endDate: string
   sortOrder: number
-  achievements: AchievementForm[]
-  radar: RadarForm[]
+  companyIntro: string
+  projectIntro: string
   techTagsText: string
   highlightsText: string
 }
@@ -50,8 +40,8 @@ const emptyForm = (): ExForm => ({
   startDate: '',
   endDate: '',
   sortOrder: 0,
-  achievements: [],
-  radar: [],
+  companyIntro: '',
+  projectIntro: '',
   techTagsText: '',
   highlightsText: '',
 })
@@ -91,8 +81,8 @@ function startEdit(item: Experience) {
     startDate: item.startDate ?? '',
     endDate: item.endDate ?? '',
     sortOrder: item.sortOrder ?? 0,
-    achievements: item.achievements.map((a) => ({ value: a.value, context: a.context ?? '' })),
-    radar: item.radar.map((r) => ({ dimension: r.dimension, score: Number(r.score) })),
+    companyIntro: item.companyIntro ?? '',
+    projectIntro: item.projectIntro ?? '',
     techTagsText: (item.techTags ?? []).join('\n'),
     highlightsText: (item.highlights ?? []).join('\n'),
   }
@@ -104,28 +94,6 @@ function cancelEdit() {
   editingId.value = null
 }
 
-function addAchievement() {
-  if (form.value.achievements.length >= 6) {
-    errorMsg.value = '战果最多 6 条'
-    return
-  }
-  form.value.achievements.push({ value: '', context: '' })
-}
-function removeAchievement(index: number) {
-  form.value.achievements.splice(index, 1)
-}
-
-function addRadar() {
-  if (form.value.radar.length >= 8) {
-    errorMsg.value = '雷达维度最多 8 个'
-    return
-  }
-  form.value.radar.push({ dimension: '', score: 50 })
-}
-function removeRadar(index: number) {
-  form.value.radar.splice(index, 1)
-}
-
 function validate(): string | null {
   const f = form.value
   if (!f.company.trim()) return '公司不能为空'
@@ -134,18 +102,11 @@ function validate(): string | null {
   if (f.title.trim().length > 50) return '职位不能超过 50 字符'
   if (!f.startDate) return '入职时间必填'
   if (f.endDate && f.endDate < f.startDate) return '结束时间不能早于入职时间'
-  if (f.achievements.some((a) => !a.value.trim())) return '战果 value 不能为空'
-  if (f.achievements.some((a) => a.value.length > 20)) return '战果 value 最长 20'
-  if (f.achievements.some((a) => a.context.length > 50)) return '战果 context 最长 50'
-  const radar = f.radar.map((r) => ({ dimension: r.dimension.trim(), score: Number(r.score) }))
-  const radarErr = validateRadar(radar)
-  if (radarErr) return radarErr
   const tags = splitLines(f.techTagsText)
   if (tags.length > 12) return '技术标签最多 12 个'
   if (tags.some((t) => t.length > 30)) return '单个技术标签最长 30'
   const highlights = splitLines(f.highlightsText)
   if (highlights.length > 10) return '扩展要点最多 10 条'
-  if (highlights.some((h) => h.length > 50)) return '单条扩展要点最长 50'
   return null
 }
 
@@ -163,10 +124,8 @@ async function save() {
     title: form.value.title.trim(),
     startDate: form.value.startDate,
     endDate: form.value.endDate || null,
-    achievements: form.value.achievements
-      .filter((a) => a.value.trim())
-      .map((a) => ({ value: a.value.trim(), context: a.context.trim() })),
-    radar: form.value.radar.map((r) => ({ dimension: r.dimension.trim(), score: Number(r.score) })),
+    companyIntro: form.value.companyIntro.trim(),
+    projectIntro: form.value.projectIntro.trim(),
     techTags: splitLines(form.value.techTagsText),
     highlights: splitLines(form.value.highlightsText),
     sortOrder: Number(form.value.sortOrder ?? 0),
@@ -263,48 +222,26 @@ onMounted(load)
         </label>
       </div>
 
-      <!-- 战果数组 -->
-      <fieldset class="block">
-        <legend>战果（≤6 条 · value ≤20 / context ≤50）</legend>
-        <div v-for="(a, i) in form.achievements" :key="i" class="row">
-          <input
-            v-model="a.value"
-            type="text"
-            maxlength="20"
-            placeholder="300%、50w+…"
-            spellcheck="false"
-          />
-          <input
-            v-model="a.context"
-            type="text"
-            maxlength="50"
-            placeholder="一句话语境"
-            spellcheck="false"
-          />
-          <button class="mini-btn danger" type="button" @click="removeAchievement(i)">删</button>
-        </div>
-        <button class="mini-btn" type="button" @click="addAchievement">+ 战果</button>
-      </fieldset>
-
-      <!-- 雷达维度数组（3~8） -->
-      <fieldset class="block">
-        <legend>雷达维度（3~8 个 · 维度名 ≤20 不重复 · 分值 0~100）</legend>
-        <div v-for="(r, i) in form.radar" :key="i" class="row">
-          <input
-            v-model="r.dimension"
-            type="text"
-            maxlength="20"
-            placeholder="架构能力"
-            spellcheck="false"
-          />
-          <input v-model.number="r.score" type="number" min="0" max="100" step="1" />
-          <button class="mini-btn danger" type="button" @click="removeRadar(i)">删</button>
-        </div>
-        <button class="mini-btn" type="button" @click="addRadar">+ 维度</button>
-      </fieldset>
-
-      <!-- 技术标签 / 展开要点：换行分隔 -->
+      <!-- 公司/项目介绍、技术标签与展开要点：多行输入 -->
       <div class="textarea-grid">
+        <label class="field">
+          <span>公司介绍</span>
+          <textarea
+            v-model="form.companyIntro"
+            rows="5"
+            spellcheck="false"
+            placeholder="介绍公司业务、团队或负责的方向…"
+          />
+        </label>
+        <label class="field">
+          <span>项目介绍</span>
+          <textarea
+            v-model="form.projectIntro"
+            rows="5"
+            spellcheck="false"
+            placeholder="介绍相关项目、目标与承担的工作…"
+          />
+        </label>
         <label class="field">
           <span>技术标签（换行分隔，≤12 个 · 每个 ≤30）</span>
           <textarea
@@ -315,7 +252,7 @@ onMounted(load)
           />
         </label>
         <label class="field">
-          <span>展开要点（换行分隔，≤10 条 · 每条 ≤50）</span>
+          <span>展开要点（换行分隔，≤10 条）</span>
           <textarea
             v-model="form.highlightsText"
             rows="4"
@@ -352,8 +289,8 @@ onMounted(load)
           <th scope="col">ID</th>
           <th scope="col">公司 / 职位</th>
           <th scope="col">时间</th>
-          <th scope="col">战果</th>
-          <th scope="col">雷达</th>
+          <th scope="col">公司介绍</th>
+          <th scope="col">项目介绍</th>
           <th scope="col">标签</th>
           <th scope="col">排序</th>
           <th scope="col">操作</th>
@@ -369,8 +306,8 @@ onMounted(load)
             </div>
           </td>
           <td class="dim">{{ rangeText(item) }}</td>
-          <td class="dim">{{ item.achievements.map((a) => a.value).join(' · ') || '—' }}</td>
-          <td class="dim">{{ item.radar.length }} 维</td>
+          <td class="dim preview-cell">{{ item.companyIntro || '—' }}</td>
+          <td class="dim preview-cell">{{ item.projectIntro || '—' }}</td>
           <td class="dim">{{ item.techTags.length }}</td>
           <td class="dim">{{ item.sortOrder }}</td>
           <td class="ops">
@@ -585,6 +522,12 @@ onMounted(load)
 }
 .dim {
   color: var(--text-dim);
+}
+
+.preview-cell {
+  max-width: 240px;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .ops {
   white-space: nowrap;

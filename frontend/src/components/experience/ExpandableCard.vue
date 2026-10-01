@@ -2,14 +2,11 @@
 import { computed, ref } from 'vue'
 
 import type { Experience } from '@/api/experience'
-import AchievementCounter from './AchievementCounter.vue'
-import RadarChart from './RadarChart.vue'
 import TechTagCloud from './TechTagCloud.vue'
 import { defaultSummary, formatDateRange } from './experienceFormat'
 
 /**
- * 经历卡（Spec 09）：默认态为纯视觉卡片——公司/职位/时间摘要（≤30 字）+ 战果翻牌 + 雷达 + 技术标签云；
- * 点击/hover 展开才显示补充要点列表（单条 ≤50 字，不写段落）。
+ * 经历卡：展示公司介绍、项目介绍与技术标签；点击/hover 展开补充要点。
  */
 const props = defineProps<{ experience: Experience }>()
 
@@ -62,19 +59,18 @@ function onHoverOut() {
     </header>
 
     <div class="exp-visual">
-      <ul v-if="experience.achievements.length" class="ach-list" data-testid="achievements">
-        <li v-for="(a, i) in experience.achievements" :key="i" class="ach">
-          <AchievementCounter :value="a.value" />
-          <span class="ach-context">{{ a.context }}</span>
-        </li>
-      </ul>
-      <div class="exp-charts">
-        <div class="exp-radar">
-          <RadarChart :radar="experience.radar" />
-        </div>
-        <div class="exp-tags">
-          <TechTagCloud :tech-tags="experience.techTags" />
-        </div>
+      <div v-if="experience.companyIntro?.trim() || experience.projectIntro?.trim()" class="exp-intros">
+        <section v-if="experience.companyIntro?.trim()" class="intro-panel">
+          <h3 class="intro-title">公司介绍</h3>
+          <p class="intro-text">{{ experience.companyIntro }}</p>
+        </section>
+        <section v-if="experience.projectIntro?.trim()" class="intro-panel">
+          <h3 class="intro-title">项目介绍</h3>
+          <p class="intro-text">{{ experience.projectIntro }}</p>
+        </section>
+      </div>
+      <div v-if="experience.techTags.length" class="exp-tags">
+        <TechTagCloud :tech-tags="experience.techTags" />
       </div>
     </div>
 
@@ -173,32 +169,37 @@ function onHoverOut() {
   gap: 14px;
 }
 
-.ach-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.exp-intros {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 14px;
-}
-
-.ach {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.ach-context {
-  font-size: 12px;
-  color: var(--text-dim);
-  line-height: 1.5;
-}
-
-.exp-charts {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
-  align-items: center;
+}
+
+.intro-panel {
+  min-width: 0;
+  border-left: 2px solid var(--border-bright);
+  padding-left: 12px;
+}
+
+.intro-title {
+  margin: 0 0 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green);
+}
+
+.intro-text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.exp-tags {
+  min-width: 0;
 }
 
 .exp-details {
@@ -237,7 +238,7 @@ function onHoverOut() {
 }
 
 @media (max-width: 680px) {
-  .exp-charts {
+  .exp-intros {
     grid-template-columns: 1fr;
   }
 }

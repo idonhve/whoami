@@ -22,6 +22,8 @@ export default defineConfig({
     },
   },
   build: {
+    outDir: '../dist',
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         // 重型依赖独立分包，保住首包体积红线（PRD §4.1：首包 gzip ≤ 500KB，不含 3D 场景）

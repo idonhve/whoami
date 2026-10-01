@@ -51,8 +51,6 @@ public class CertificateService {
         String validName = requireName(name);
         LocalDate validObtainedAt = requireObtainedAt(obtainedAt);
         ProcessedImage processed = imageProcessor.process(file);
-        uploadBlobService.store(processed.originalFile(), processed.contentType(), processed.original());
-        uploadBlobService.store(processed.thumbnailFile(), processed.contentType(), processed.thumbnail());
 
         Certificate entity = new Certificate();
         entity.setName(validName);
@@ -60,11 +58,17 @@ public class CertificateService {
         entity.setOriginalFile(processed.originalFile());
         entity.setThumbnailFile(processed.thumbnailFile());
         try {
+            uploadBlobService.store(processed.originalFile(), processed.contentType(), processed.original());
+            if (!processed.thumbnailFile().equals(processed.originalFile())) {
+                uploadBlobService.store(processed.thumbnailFile(), processed.contentType(), processed.thumbnail());
+            }
             certificateMapper.insert(entity);
         } catch (RuntimeException e) {
             // 入库失败则清理刚存的内容行，避免孤儿文件
             uploadBlobService.delete(processed.originalFile());
-            uploadBlobService.delete(processed.thumbnailFile());
+            if (!processed.thumbnailFile().equals(processed.originalFile())) {
+                uploadBlobService.delete(processed.thumbnailFile());
+            }
             throw e;
         }
         return entity.getId();
@@ -95,7 +99,9 @@ public class CertificateService {
         }
         certificateMapper.deleteById(id);
         uploadBlobService.delete(existing.getOriginalFile());
-        uploadBlobService.delete(existing.getThumbnailFile());
+        if (!existing.getThumbnailFile().equals(existing.getOriginalFile())) {
+            uploadBlobService.delete(existing.getThumbnailFile());
+        }
     }
 
     private CertificateDTO toDTO(Certificate entity) {

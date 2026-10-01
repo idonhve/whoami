@@ -27,8 +27,12 @@ export interface Experience {
   startDate: string
   /** null = 至今 */
   endDate: string | null
-  achievements: AchievementItem[]
-  radar: RadarItem[]
+  companyIntro?: string | null
+  projectIntro?: string | null
+  /** @deprecated Retained only for clients displaying data from the previous API shape. */
+  achievements?: AchievementItem[]
+  /** @deprecated Retained only for clients displaying data from the previous API shape. */
+  radar?: RadarItem[]
   techTags: string[]
   highlights: string[]
   sortOrder: number

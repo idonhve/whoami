@@ -3,7 +3,7 @@ import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import Lightbox from '@/components/awards/Lightbox.vue'
 import FrontLayout from '@/components/layout/FrontLayout.vue'
-import { fetchCertificates, type Certificate } from '@/api/certificate'
+import { fetchCertificates, isPdfCertificate, pdfPreviewUrl, type Certificate } from '@/api/certificate'
 
 /**
  * 证书照片墙（Spec 08）：CSS columns 瀑布流 + 缩略图懒加载（进视口前 500px 才加载）
@@ -173,8 +173,16 @@ onBeforeUnmount(() => {
           @pointercancel="resetTilt"
         >
           <span class="award-media">
+            <iframe
+              v-if="loaded.has(cert.id) && isPdfCertificate(cert)"
+              class="award-pdf-preview"
+              :src="pdfPreviewUrl(cert.thumbUrl)"
+              :title="`PDF 预览：${cert.name}`"
+              loading="lazy"
+              tabindex="-1"
+            />
             <img
-              v-if="loaded.has(cert.id)"
+              v-else-if="loaded.has(cert.id)"
               class="award-thumb"
               :src="cert.thumbUrl"
               :alt="cert.name"
@@ -315,6 +323,15 @@ onBeforeUnmount(() => {
   display: block;
   width: 100%;
   height: auto;
+}
+
+.award-pdf-preview {
+  display: block;
+  width: 100%;
+  height: 380px;
+  border: 0;
+  background: var(--bg-raised);
+  pointer-events: none;
 }
 
 /* 加载占位：像素扫描线 + LED 呼吸（不动布局） */

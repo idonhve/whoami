@@ -14,9 +14,9 @@ export interface Certificate {
   name: string
   /** ISO-8601 日期 YYYY-MM-DD */
   obtainedAt: string
-  /** 缩略图（约 400px webp，网格懒加载用） */
+  /** 网格媒体预览：图片约 400px 缩略图，PDF 为原文件第一页 */
   thumbUrl: string
-  /** 压缩原图（长边 ≤ 2000px，灯箱打开时才加载） */
+  /** 灯箱媒体：压缩原图或 PDF 原文件 */
   imageUrl: string
   sortOrder: number
 }
@@ -86,13 +86,22 @@ export function deleteCertificate(id: number) {
   return http.delete<null>(`/admin/api/certificates/${id}`)
 }
 
+export function isPdfCertificate(item: Pick<Certificate, 'imageUrl'>): boolean {
+  return item.imageUrl.split(/[?#]/, 1)[0]?.toLowerCase().endsWith('.pdf') ?? false
+}
+
+export function pdfPreviewUrl(url: string): string {
+  return `${url.split('#', 1)[0]}#page=1&view=FitH&toolbar=0`
+}
+
 /** 上传文件前端预校验（类型/大小）：不合法返回错误文案，合法返回 null */
 export function validateCertificateFile(file: File): string | null {
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return '仅支持 jpg / jpeg / png / webp 格式图片'
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+  if (!ALLOWED_TYPES.includes(file.type) && !isPdf) {
+    return '仅支持 jpg / jpeg / png / webp 图片或 PDF 文件'
   }
   if (file.size > CERT_MAX_SIZE_BYTES) {
-    return '图片大小不能超过 5MB'
+    return '证书文件大小不能超过 5MB'
   }
   return null
 }

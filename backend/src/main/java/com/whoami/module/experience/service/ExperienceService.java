@@ -2,24 +2,20 @@ package com.whoami.module.experience.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.whoami.common.BizException;
-import com.whoami.module.experience.dto.AchievementItem;
 import com.whoami.module.experience.dto.ExperienceCreate;
 import com.whoami.module.experience.dto.ExperienceDTO;
 import com.whoami.module.experience.dto.IdResult;
-import com.whoami.module.experience.dto.RadarItem;
 import com.whoami.module.experience.entity.Experience;
 import com.whoami.module.experience.mapper.ExperienceMapper;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
 /**
  * 工作经历（Spec 09）。公开列表按 sortOrder 升序、再按 startDate 倒序；
- * 复合结构（achievements/radar/tech_tags/highlights）序列化为 JSON 列存储。
+ * 标签与展开要点序列化为 JSON 列存储。
  */
 @Service
 public class ExperienceService {
@@ -56,6 +52,9 @@ public class ExperienceService {
         }
         Experience update = toEntity(req);
         update.setId(id);
+        // 保留旧版字段中的历史数据；当前 API 已由公司介绍/项目介绍取代它们。
+        update.setAchievements(existing.getAchievements());
+        update.setRadar(existing.getRadar());
         experienceMapper.updateById(update);
     }
 
@@ -67,14 +66,10 @@ public class ExperienceService {
         experienceMapper.deleteById(id);
     }
 
-    /** 跨字段/跨元素校验：日期不倒置、radar 维度名不重复（其余约束由 Bean Validation 守门） */
+    /** 跨字段校验：日期不倒置（其余约束由 Bean Validation 守门） */
     private void validateCrossField(ExperienceCreate req) {
         if (req.endDate() != null && req.startDate().isAfter(req.endDate())) {
             throw new BizException(400, "startDate 不能晚于 endDate");
-        }
-        List<String> dimensions = req.radar().stream().map(RadarItem::dimension).toList();
-        if (dimensions.size() > new HashSet<>(dimensions).size()) {
-            throw new BizException(400, "radar 维度名不能重复");
         }
     }
 
@@ -84,8 +79,10 @@ public class ExperienceService {
         e.setTitle(req.title());
         e.setStartDate(req.startDate());
         e.setEndDate(req.endDate());
-        e.setAchievements(writeJson(req.achievements()));
-        e.setRadar(writeJson(req.radar()));
+        e.setCompanyIntro(req.companyIntro());
+        e.setProjectIntro(req.projectIntro());
+        e.setAchievements("[]");
+        e.setRadar("[]");
         e.setTechTags(writeJson(req.techTags()));
         e.setHighlights(writeJson(req.highlights()));
         e.setSortOrder(req.sortOrder() == null ? 0 : req.sortOrder());
@@ -99,8 +96,8 @@ public class ExperienceService {
                 e.getTitle(),
                 e.getStartDate(),
                 e.getEndDate(),
-                readJsonList(e.getAchievements(), AchievementItem.class),
-                readJsonList(e.getRadar(), RadarItem.class),
+                e.getCompanyIntro(),
+                e.getProjectIntro(),
                 readJsonList(e.getTechTags(), String.class),
                 readJsonList(e.getHighlights(), String.class),
                 e.getSortOrder());
@@ -116,11 +113,11 @@ public class ExperienceService {
 
     private <T> List<T> readJsonList(String json, Class<T> elementType) {
         if (json == null || json.isBlank()) {
-            return Collections.emptyList();
+            return List.of();
         }
         try {
-            return objectMapper.readValue(json, new TypeReference<List<T>>() {
-            }).stream().map(elementType::cast).toList();
+            JavaType listType = objectMapper.getTypeFactory().constructCollectionType(List.class, elementType);
+            return objectMapper.readValue(json, listType);
         } catch (Exception ex) {
             throw new IllegalStateException("反序列化 JSON 列失败", ex);
         }

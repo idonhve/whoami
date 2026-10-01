@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** 工作经历（Spec 09）。复合结构（achievements/radar/tech_tags/highlights）以 JSON 字符串存储。 */
+/** 工作经历。公司/项目介绍为正文，标签与展开要点以 JSON 字符串存储。 */
 @TableName("experience")
 public class Experience {
 
@@ -21,6 +21,10 @@ public class Experience {
 
     /** null = 至今 */
     private LocalDate endDate;
+
+    private String companyIntro;
+
+    private String projectIntro;
 
     /** JSON: [{value, context}] 战果数组 */
     private String achievements;
@@ -78,6 +82,22 @@ public class Experience {
 
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+
+    public String getCompanyIntro() {
+        return companyIntro;
+    }
+
+    public void setCompanyIntro(String companyIntro) {
+        this.companyIntro = companyIntro;
+    }
+
+    public String getProjectIntro() {
+        return projectIntro;
+    }
+
+    public void setProjectIntro(String projectIntro) {
+        this.projectIntro = projectIntro;
     }
 
     public String getAchievements() {

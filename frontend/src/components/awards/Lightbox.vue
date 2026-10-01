@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-import type { Certificate } from '@/api/certificate'
+import { isPdfCertificate, pdfPreviewUrl, type Certificate } from '@/api/certificate'
 
 /**
  * 证书灯箱（Spec 08）：打开时才加载压缩原图；
@@ -84,7 +84,15 @@ onBeforeUnmount(() => {
     >
       <figure class="lb-stage">
         <Transition name="lb-img" mode="out-in">
+          <iframe
+            v-if="isPdfCertificate(current)"
+            :key="current.id"
+            class="lb-pdf"
+            :src="pdfPreviewUrl(current.imageUrl)"
+            :title="`PDF 证书：${current.name}`"
+          />
           <img
+            v-else
             :key="current.id"
             class="lb-image"
             :src="current.imageUrl"
@@ -157,6 +165,15 @@ body.lb-scroll-lock {
   background: var(--bg-panel);
   box-shadow: 0 0 32px var(--green-soft);
   object-fit: contain;
+}
+
+.lb-pdf {
+  display: block;
+  width: min(92vw, 960px);
+  height: 78vh;
+  border: 2px solid var(--border-bright);
+  background: var(--bg-panel);
+  box-shadow: 0 0 32px var(--green-soft);
 }
 
 .lb-caption {
@@ -284,6 +301,11 @@ body.lb-scroll-lock {
   .lb-image {
     max-width: 94vw;
     max-height: 72vh;
+  }
+
+  .lb-pdf {
+    width: 94vw;
+    height: 72vh;
   }
 
   .lb-prev {

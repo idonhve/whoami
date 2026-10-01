@@ -1,6 +1,5 @@
 package com.whoami.module.experience.dto;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -10,7 +9,7 @@ import java.util.List;
 /**
  * 经历卡创建/更新请求（POST 与 PUT 共用，契约见 docs/spec/09-experience.md）。
  * company/title/startDate 必填；endDate 可空（null = 至今），且不得早于 startDate（service 层跨字段校验）。
- * radar 必填且维度数 3~8；achievements/techTags/highlights 缺省按空数组处理。
+ * 公司介绍/项目介绍为自由文本；techTags/highlights 缺省按空数组处理。
  */
 public record ExperienceCreate(
         @NotBlank(message = "company 不能为空")
@@ -26,18 +25,30 @@ public record ExperienceCreate(
 
         LocalDate endDate,
 
-        @Size(max = 6, message = "achievements 最多 6 条")
-        List<@Valid AchievementItem> achievements,
+        String companyIntro,
 
-        @NotNull(message = "radar 不能为空")
-        @Size(min = 3, max = 8, message = "radar 维度数应为 3~8")
-        List<@Valid RadarItem> radar,
+        String projectIntro,
 
         @Size(max = 12, message = "techTags 最多 12 个")
         List<@Size(max = 30, message = "单个 techTag 最长 30") String> techTags,
 
         @Size(max = 10, message = "highlights 最多 10 条")
-        List<@Size(max = 50, message = "单条 highlight 最长 50") String> highlights,
+        List<String> highlights,
 
         Integer sortOrder) {
+
+    /** Keeps existing Java callers source-compatible while the API form migrates to intro text. */
+    @Deprecated
+    public ExperienceCreate(
+            String company,
+            String title,
+            LocalDate startDate,
+            LocalDate endDate,
+            List<AchievementItem> achievements,
+            List<RadarItem> radar,
+            List<String> techTags,
+            List<String> highlights,
+            Integer sortOrder) {
+        this(company, title, startDate, endDate, (String) null, (String) null, techTags, highlights, sortOrder);
+    }
 }

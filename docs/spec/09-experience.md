@@ -1,27 +1,26 @@
-# Spec 09 — F9 工作经历模块（战果视觉墙）
+# Spec 09 — F9 工作经历模块（公司 / 项目介绍）
 
 > 对应 PRD §F9、§5 页面结构 `/experience`。术语遵循 `CONTEXT.md`（经历、战果、雷达图维度）。
 > 发布为 GitHub Issue #10（`idonhve/whoami`，标签 `ready-for-agent`）。依赖 Spec 00（地基、表骨架、鉴权）。
 
 ## Problem Statement
 
-传统简历的工作经历是大段文字罗列，面试官扫读成本高、留不下记忆点；战果数字淹没在段落里，无法体现"这个人最强的是什么"。
+工作经历需要清楚呈现任职信息、公司背景与参与项目，让访客能够快速了解每段工作的上下文。
 
 ## Solution
 
-`/experience` 页以"滚动点亮时间轴 + 战果视觉卡片"呈现：左侧发光主线路随滚动逐段点亮、当前经历卡片高亮；每段经历默认态为纯视觉卡片——核心数字战果翻牌/滚动递增、雷达图展示能力维度、技术标签图标云；单卡片默认态文字 ≤ 30 字（公司+职位+时间），点击/hover 展开要点列表。数据来自 `experience` 表，雷达图维度后台可自定义（3~8 个维度）。
+`/experience` 页以滚动时间轴呈现经历卡片。每张卡片展示公司、职位、任职时间、公司介绍、项目介绍与技术标签；点击或悬停可展开补充要点。公司介绍、项目介绍和补充要点支持长文本。数据来自 `experience` 表，并由管理后台维护。
 
 ## User Stories
 
 1. 作为面试官，我希望随滚动点亮的时间轴快速纵览职业轨迹，以便几秒建立履历全貌。
 2. 作为面试官，我希望当前屏的经历卡片高亮，以便注意力聚焦。
-3. 作为面试官，我希望看到大数字翻牌动画的核心战果（如 `300%`、`50w+`），以便被关键成绩击中。
-4. 作为面试官，我希望雷达图展示各阶段能力面，以便对比成长轨迹。
-5. 作为面试官，我希望卡片默认只有公司+职位+时间（≤ 30 字），点击展开要点细节，以便先扫视再深入。
+3. 作为面试官，我希望了解公司的业务与团队背景，以便理解工作经历。
+4. 作为面试官，我希望了解参与项目及承担的工作，以便理解经历中的实际内容。
+5. 作为面试官，我希望卡片展示补充要点，以便快速浏览工作细节。
 6. 作为技术同行，我希望技术标签以图标云呈现，以便识别技术口味。
 7. 作为移动端访客，我希望时间轴变单列卡片 + 滚动渐入，以便手机上同样流畅。
-8. 作为站主，我希望后台增删改经历卡（公司/职位/时间/战果/技术标签/雷达图维度数据），以便内容运营不发版。
-9. 作为站主，我希望雷达图维度可自定义（3~8 个），以便每段经历表达能力差异。
+8. 作为站主，我希望后台增删改经历卡（公司/职位/时间/公司介绍/项目介绍/技术标签/补充要点），以便内容运营不发版。
 
 ## Implementation Decisions
 
@@ -48,9 +47,9 @@
 | PUT | `/admin/api/experiences/{id}` | JWT | `ExperienceCreate` | 空 |
 | DELETE | `/admin/api/experiences/{id}` | JWT | 无 | 空 |
 
-**ExperienceDTO：** `id`、`company`、`title`、`startDate`、`endDate`（null = 至今）、`achievements: [{value, context}]`（战果：数字/文本值 + 一句话语境）、`radar: [{dimension, score}]`、`techTags: string[]`、`highlights: string[]`（展开要点列表）、`sortOrder`。
+**ExperienceDTO：** `id`、`company`、`title`、`startDate`、`endDate`（null = 至今）、`companyIntro`、`projectIntro`、`techTags: string[]`、`highlights: string[]`、`sortOrder`。
 
-**校验（400）：** `company`/`title` 必填各 ≤ 50；`startDate` 必填且 ≤ `endDate`；`radar` 维度数 3~8 且 `score` 0~100 整数、维度名 ≤ 20 不重复；`techTags` ≤ 12 个、单个 ≤ 30；`highlights` ≤ 10 条；`achievements` ≤ 6 条、`value` ≤ 20、`context` ≤ 50。
+**校验（400）：** `company`/`title` 必填各 ≤ 50；`startDate` 必填且 ≤ `endDate`；`techTags` ≤ 12 个、单个 ≤ 30；`highlights` ≤ 10 条。公司介绍、项目介绍和单条要点均不限制字符数。
 
 ### 表结构
 
@@ -63,8 +62,10 @@
 | title | varchar(50) | 非空 | 职位 |
 | start_date | date | 非空 | 入职 |
 | end_date | date | 可空 | null = 至今 |
-| achievements | json | 非空 | `[{value, context}]` 战果数组 |
-| radar | json | 非空 | `[{dimension, score}]` 3~8 维 |
+| company_intro | mediumtext | 可空 | 公司介绍正文 |
+| project_intro | mediumtext | 可空 | 项目介绍正文 |
+| achievements | json | 非空 | 旧版遗留字段，保留历史数据 |
+| radar | json | 非空 | 旧版遗留字段，保留历史数据 |
 | tech_tags | json | 非空 | 技术标签字符串数组 |
 | highlights | json | 可空 | 展开要点列表 |
 | sort_order | int | 非空, 默认 0 | |
@@ -76,7 +77,7 @@
 
 * [ ] 滚动驱动：左侧发光主线路随滚动逐段点亮，当前经历卡片高亮
 
-* [ ] 每段经历默认态为纯视觉卡片：① 核心数字战果用翻牌/滚动递增动画（如 `300%`、`50w+`）；② 雷达图展示该阶段能力维度（后台配置维度与数值）；③ 技术标签以图标云呈现
+* [ ] 每段经历卡片展示公司介绍、项目介绍与技术标签；点击/悬停可展开补充要点
 
 * [ ] 单卡片默认态文字 ≤ 30 字（公司+职位+时间）；点击/hover 展开才显示补充细节（展开内容也以要点列表为主，不写段落）
 

@@ -4,7 +4,7 @@ import java.time.LocalDate;
 
 /**
  * 证书对外视图（GET /api/certificates）。
- * thumbUrl/imageUrl 为 /uploads/** 静态资源相对地址，前台按需加载缩略图与原图。
+ * thumbUrl/imageUrl 为 /uploads/** 相对地址，图片使用缩略图/原图，PDF 使用原文件预览。
  */
 public record CertificateDTO(
         Long id,

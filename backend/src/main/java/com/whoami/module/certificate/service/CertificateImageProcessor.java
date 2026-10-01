@@ -33,6 +33,7 @@ public class CertificateImageProcessor {
     public static final long MAX_FILE_BYTES = 5L * 1024 * 1024;
 
     private static final String DIR_NAME = "certificate";
+    private static final String PDF = "application/pdf";
     private static final String WEBP = "webp";
     private static final String JPEG = "jpeg";
     private static final float THUMB_QUALITY = 0.8f;
@@ -43,13 +44,15 @@ public class CertificateImageProcessor {
             String originalFile, String thumbnailFile, String contentType, byte[] original, byte[] thumbnail) {
     }
 
-    /**
-     * 校验并处理上传图片。校验失败抛 400；处理/编码失败抛 500。
-     */
+    /** 校验证书图片或 PDF，并为图片生成缩略图。校验失败抛 400；处理/编码失败抛 500。 */
     public ProcessedImage process(MultipartFile file) {
         byte[] bytes = readBytes(file);
+        if (PdfFormat.detect(bytes)) {
+            String filePath = DIR_NAME + "/" + UUID.randomUUID().toString().replace("-", "") + ".pdf";
+            return new ProcessedImage(filePath, filePath, PDF, bytes, bytes);
+        }
         if (ImageFormat.detect(bytes) == null) {
-            throw new BizException(400, "图片格式不支持，仅支持 jpg/jpeg/png/webp");
+            throw new BizException(400, "文件格式不支持，仅支持 jpg/jpeg/png/webp/pdf");
         }
         BufferedImage source = decode(bytes);
 
@@ -82,7 +85,7 @@ public class CertificateImageProcessor {
             throw new BizException(400, "file 必填");
         }
         if (file.getSize() > MAX_FILE_BYTES) {
-            throw new BizException(400, "图片大小不能超过 5MB");
+            throw new BizException(400, "证书文件大小不能超过 5MB");
         }
         try {
             return file.getBytes();
@@ -157,6 +160,20 @@ public class CertificateImageProcessor {
                 return WEBP;
             }
             return null;
+        }
+    }
+
+    /** PDF 文件签名（不信任浏览器上报的 MIME 类型或扩展名）。 */
+    private enum PdfFormat {
+        ;
+
+        static boolean detect(byte[] bytes) {
+            return bytes.length >= 5
+                    && bytes[0] == '%'
+                    && bytes[1] == 'P'
+                    && bytes[2] == 'D'
+                    && bytes[3] == 'F'
+                    && bytes[4] == '-';
         }
     }
 }
