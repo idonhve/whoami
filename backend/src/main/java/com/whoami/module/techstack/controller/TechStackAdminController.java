@@ -1,6 +1,7 @@
 package com.whoami.module.techstack.controller;
 
 import com.whoami.common.ApiResult;
+import com.whoami.module.techstack.dto.AddCatalogTechRequest;
 import com.whoami.module.techstack.dto.IdResult;
 import com.whoami.module.techstack.dto.TechItem;
 import com.whoami.module.techstack.dto.TechItemCreate;
@@ -38,6 +39,14 @@ public class TechStackAdminController {
     @PostMapping
     public ApiResult<IdResult> create(@Valid @RequestBody TechItemCreate request) {
         TechItem created = techStackService.create(request);
+        return ApiResult.ok(new IdResult(created.id()));
+    }
+
+    @PostMapping("/catalog/{catalogId}")
+    public ApiResult<IdResult> addCatalogItem(
+            @PathVariable("catalogId") long catalogId,
+            @Valid @RequestBody AddCatalogTechRequest request) {
+        TechItem created = techStackService.addCatalogItem(catalogId, request);
         return ApiResult.ok(new IdResult(created.id()));
     }
 

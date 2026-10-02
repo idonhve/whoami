@@ -8,8 +8,16 @@ public record TechItem(
         Long id,
         String name,
         String icon,
+        String iconUrl,
+        Long catalogId,
         String category,
         String proficiency,
         Integer weight,
         Integer sortOrder) {
+
+    /** Retain the original constructor shape for existing backend callers. */
+    public TechItem(Long id, String name, String icon, String category,
+                    String proficiency, Integer weight, Integer sortOrder) {
+        this(id, name, icon, null, null, category, proficiency, weight, sortOrder);
+    }
 }

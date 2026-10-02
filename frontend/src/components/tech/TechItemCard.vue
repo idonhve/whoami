@@ -20,7 +20,7 @@ withDefaults(
 
 <template>
   <li class="tech-item" :class="{ '--reveal': visible }" :style="{ '--i': index }">
-    <TechIcon :icon="item.icon" :size="30" />
+    <TechIcon :icon="item.icon" :icon-url="item.iconUrl" :name="item.name" :size="30" />
     <div class="meta">
       <span class="name">{{ item.name }}</span>
       <span class="cat">{{ item.category }}</span>

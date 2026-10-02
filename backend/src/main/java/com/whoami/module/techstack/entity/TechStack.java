@@ -19,6 +19,10 @@ public class TechStack {
 
     private String icon;
 
+    private String iconPath;
+
+    private Long catalogId;
+
     private String category;
 
     private String proficiency;
@@ -53,6 +57,22 @@ public class TechStack {
 
     public void setIcon(String icon) {
         this.icon = icon;
+    }
+
+    public String getIconPath() {
+        return iconPath;
+    }
+
+    public void setIconPath(String iconPath) {
+        this.iconPath = iconPath;
+    }
+
+    public Long getCatalogId() {
+        return catalogId;
+    }
+
+    public void setCatalogId(Long catalogId) {
+        this.catalogId = catalogId;
     }
 
     public String getCategory() {

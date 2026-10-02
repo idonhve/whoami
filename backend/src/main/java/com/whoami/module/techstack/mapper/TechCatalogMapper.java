@@ -1,0 +1,9 @@
+package com.whoami.module.techstack.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.whoami.module.techstack.entity.TechCatalog;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface TechCatalogMapper extends BaseMapper<TechCatalog> {
+}
