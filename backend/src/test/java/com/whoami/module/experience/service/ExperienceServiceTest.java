@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.whoami.common.BizException;
 import com.whoami.module.experience.dto.ExperienceCreate;
-import com.whoami.module.experience.dto.RadarItem;
 import com.whoami.module.experience.entity.Experience;
 import com.whoami.module.experience.mapper.ExperienceMapper;
 import java.time.LocalDate;
@@ -21,7 +20,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/** Spec 09 服务层契约：跨字段/去重校验抛 400、JSON 列序列化、404 处理。 */
+/** Spec 09 服务层契约：日期校验、介绍字段/JSON 列序列化、404 处理。 */
 @ExtendWith(MockitoExtension.class)
 class ExperienceServiceTest {
 
@@ -39,30 +38,11 @@ class ExperienceServiceTest {
     void createWithInvertedDatesThrows400() {
         ExperienceCreate inverted = new ExperienceCreate(
                 "A社", "工程师", LocalDate.of(2020, 1, 1), LocalDate.of(2019, 1, 1),
-                List.of(), List.of(
-                        new RadarItem("后端", 60),
-                        new RadarItem("前端", 70),
-                        new RadarItem("性能", 80)),
-                List.of(), List.of(), 0);
+                "公司介绍", "项目介绍", List.of(), List.of(), 0);
 
         assertThatThrownBy(() -> service.create(inverted))
                 .isInstanceOf(BizException.class)
                 .hasMessage("startDate 不能晚于 endDate");
-    }
-
-    @Test
-    void createWithDuplicateRadarDimensionThrows400() {
-        ExperienceCreate req = new ExperienceCreate(
-                "A社", "工程师", LocalDate.of(2020, 1, 1), null,
-                List.of(), List.of(
-                        new RadarItem("后端", 60),
-                        new RadarItem("后端", 70),
-                        new RadarItem("性能", 80)),
-                List.of(), List.of(), 0);
-
-        assertThatThrownBy(() -> service.create(req))
-                .isInstanceOf(BizException.class)
-                .hasMessage("radar 维度名不能重复");
     }
 
     @Test
@@ -80,8 +60,12 @@ class ExperienceServiceTest {
         verify(experienceMapper).insert(captor.capture());
         Experience saved = captor.getValue();
         assertThat(saved.getSortOrder()).isEqualTo(0);
-        assertThat(saved.getRadar()).contains("\"dimension\":\"后端\"");
+        assertThat(saved.getCompanyIntro()).isEqualTo("公司介绍");
+        assertThat(saved.getProjectIntro()).isEqualTo("项目介绍");
+        assertThat(saved.getTechTags()).isEqualTo("[\"Java\"]");
+        assertThat(saved.getHighlights()).isEqualTo("[\"要点一\"]");
         assertThat(saved.getAchievements()).isEqualTo("[]");
+        assertThat(saved.getRadar()).isEqualTo("[]");
     }
 
     @Test
@@ -105,10 +89,6 @@ class ExperienceServiceTest {
     private ExperienceCreate validCreate() {
         return new ExperienceCreate(
                 "A社", "工程师", LocalDate.of(2020, 1, 1), LocalDate.of(2022, 1, 1),
-                List.of(), List.of(
-                        new RadarItem("后端", 60),
-                        new RadarItem("前端", 70),
-                        new RadarItem("性能", 80)),
-                List.of("Java"), List.of("要点一"), null);
+                "公司介绍", "项目介绍", List.of("Java"), List.of("要点一"), null);
     }
 }

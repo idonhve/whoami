@@ -23,7 +23,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Spec 09 工作经历契约测试：公开排序 / 未登录 401 / JSON 字段校验（radar 维度与分数、日期倒置）/ CRUD 即时反映。
+ * Spec 09 工作经历契约测试：公开排序 / 未登录 401 / 长介绍文本 / 日期倒置 / CRUD 即时反映。
  */
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -91,17 +91,15 @@ class ExperienceApiIT {
 
     @Test
     @Order(3)
-    void rejectsRadarOutOfRange() {
+    void acceptsLongCompanyAndProjectIntroductions() {
         String token = login();
-        // 2 维
-        assertThat(postStatus(experienceJsonRadar(2, 60), token)).isEqualTo(400);
-        // 9 维
-        assertThat(postStatus(experienceJsonRadar(9, 60), token)).isEqualTo(400);
-        // 分数越界（101 / -1），维度固定 3 以隔离分数校验
-        assertThat(postStatus(experienceJsonWithScore(3, 101), token)).isEqualTo(400);
-        assertThat(postStatus(experienceJsonWithScore(3, -1), token)).isEqualTo(400);
-        // 合法 3~8 维通过
-        assertThat(postStatus(experienceJsonRadar(5, 60), token)).isEqualTo(200);
+        String companyIntro = "公司介绍内容".repeat(500);
+        String projectIntro = "项目介绍内容".repeat(500);
+        long id = create(experienceJsonWithIntros(companyIntro, projectIntro), token);
+
+        JsonNode created = findPublicById(id);
+        assertThat(created.path("companyIntro").asText()).isEqualTo(companyIntro);
+        assertThat(created.path("projectIntro").asText()).isEqualTo(projectIntro);
     }
 
     @Test
@@ -117,16 +115,6 @@ class ExperienceApiIT {
 
     @Test
     @Order(5)
-    void rejectsDuplicateRadarDimension() {
-        String token = login();
-        String body = experienceJsonWithDimension("后端", "后端");
-        ResponseEntity<String> response = rest.exchange(
-                "/admin/api/experiences", HttpMethod.POST, jsonBody(body, token), String.class);
-        assertThat(response.getStatusCode().value()).isEqualTo(400);
-    }
-
-    @Test
-    @Order(6)
     void crudReflectsImmediately() {
         String token = login();
         long id = create(experienceJson("联调社", 0, "2021-07-01", null), token);
@@ -178,45 +166,16 @@ class ExperienceApiIT {
         return json(response).path("data").path("id").asLong();
     }
 
-    private int postStatus(String body, String token) {
-        ResponseEntity<String> response = rest.exchange(
-                "/admin/api/experiences", HttpMethod.POST, jsonBody(body, token), String.class);
-        return response.getStatusCode().value();
-    }
-
     private String experienceJson(String company, int sort, String start, String end) {
         return "{\"company\":\"" + company + "\",\"title\":\"后端工程师\",\"startDate\":\"" + start + "\","
                 + (end == null ? "" : "\"endDate\":\"" + end + "\",")
-                + "\"sortOrder\":" + sort + ",\"radar\":" + radarOf(3, 60)
+                + "\"sortOrder\":" + sort + ",\"companyIntro\":\"公司介绍\",\"projectIntro\":\"项目介绍\""
                 + ",\"techTags\":[\"Java\"],\"highlights\":[\"要点一\"]}";
     }
 
-    private String experienceJsonRadar(int dims, int score) {
-        return "{\"company\":\"雷达社\",\"title\":\"工程师\",\"startDate\":\"2021-01-01\","
-                + "\"radar\":" + radarOf(dims, score) + "}";
-    }
-
-    private String experienceJsonWithScore(int dims, int score) {
-        return "{\"company\":\"分数社\",\"title\":\"工程师\",\"startDate\":\"2021-01-01\","
-                + "\"radar\":" + radarOf(dims, score) + "}";
-    }
-
-    private String experienceJsonWithDimension(String d1, String d2) {
-        return "{\"company\":\"重复社\",\"title\":\"工程师\",\"startDate\":\"2021-01-01\","
-                + "\"radar\":[{\"dimension\":\"" + d1 + "\",\"score\":60},"
-                + "{\"dimension\":\"" + d2 + "\",\"score\":70},"
-                + "{\"dimension\":\"性能\",\"score\":80}]}";
-    }
-
-    private String radarOf(int dims, int score) {
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < dims; i++) {
-            if (i > 0) {
-                sb.append(",");
-            }
-            sb.append("{\"dimension\":\"维度").append(i).append("\",\"score\":").append(score).append("}");
-        }
-        return sb.append("]").toString();
+    private String experienceJsonWithIntros(String companyIntro, String projectIntro) {
+        return "{\"company\":\"长文社\",\"title\":\"工程师\",\"startDate\":\"2021-01-01\","
+                + "\"companyIntro\":\"" + companyIntro + "\",\"projectIntro\":\"" + projectIntro + "\"}";
     }
 
     private java.util.List<String> companies(JsonNode data) {
