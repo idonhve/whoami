@@ -15,35 +15,46 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
 
-class FlywayFailedV4RecoveryTest {
+class FlywayFailedMigrationRecoveryTest {
 
     @Test
-    void repairsOnlyTheFailedExperienceMigrationBeforeRetryingMigrations() {
+    void repairsTheFailedExperienceMigrationBeforeRetryingMigrations() {
+        assertRepairBeforeMigrate("4", "experience introductions");
+    }
+
+    @Test
+    void repairsTheFailedCatalogMigrationBeforeRetryingMigrations() {
+        assertRepairBeforeMigrate("5", "tech catalog");
+    }
+
+    @Test
+    void doesNotRepairOtherFailedMigrations() {
         Flyway flyway = mock(Flyway.class);
-        MigrationInfo failedV4 = migration("4", "experience introductions", MigrationState.FAILED);
-        MigrationInfoService migrationInfo = info(failedV4);
+        MigrationInfo failedMigration = migration("6", "unrelated migration", MigrationState.FAILED);
+        MigrationInfoService migrationInfo = info(failedMigration);
         when(flyway.info()).thenReturn(migrationInfo);
-        FlywayMigrationStrategy strategy = new FlywayFailedV4RecoveryConfiguration().flywayMigrationStrategy();
+        FlywayMigrationStrategy strategy = new FlywayFailedMigrationRecoveryConfiguration()
+                .flywayMigrationStrategy();
+
+        strategy.migrate(flyway);
+
+        verify(flyway, never()).repair();
+        verify(flyway).migrate();
+    }
+
+    private void assertRepairBeforeMigrate(String version, String description) {
+        Flyway flyway = mock(Flyway.class);
+        MigrationInfo failedMigration = migration(version, description, MigrationState.FAILED);
+        MigrationInfoService migrationInfo = info(failedMigration);
+        when(flyway.info()).thenReturn(migrationInfo);
+        FlywayMigrationStrategy strategy = new FlywayFailedMigrationRecoveryConfiguration()
+                .flywayMigrationStrategy();
 
         strategy.migrate(flyway);
 
         InOrder order = inOrder(flyway);
         order.verify(flyway).repair();
         order.verify(flyway).migrate();
-    }
-
-    @Test
-    void doesNotRepairOtherFailedMigrations() {
-        Flyway flyway = mock(Flyway.class);
-        MigrationInfo failedV5 = migration("5", "tech catalog", MigrationState.FAILED);
-        MigrationInfoService migrationInfo = info(failedV5);
-        when(flyway.info()).thenReturn(migrationInfo);
-        FlywayMigrationStrategy strategy = new FlywayFailedV4RecoveryConfiguration().flywayMigrationStrategy();
-
-        strategy.migrate(flyway);
-
-        verify(flyway, never()).repair();
-        verify(flyway).migrate();
     }
 
     private MigrationInfoService info(MigrationInfo... migrations) {

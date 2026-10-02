@@ -1,5 +1,5 @@
 -- 可选技术目录（后台选取后加入公开技术栈）；自定义图标内容存于 upload_blob。
-CREATE TABLE tech_catalog (
+CREATE TABLE IF NOT EXISTS tech_catalog (
     id          BIGINT       NOT NULL AUTO_INCREMENT,
     name        VARCHAR(50)  NOT NULL,
     icon        VARCHAR(50)  NULL COMMENT 'Devicon CSS 图标后缀',
@@ -16,7 +16,10 @@ CREATE TABLE tech_catalog (
 
 ALTER TABLE tech_stack
     ADD COLUMN catalog_id BIGINT NULL COMMENT '来源技术目录；删除展示项后目录项保留',
-    ADD COLUMN icon_path VARCHAR(255) NULL COMMENT '自定义图标相对路径',
+    ADD COLUMN icon_path VARCHAR(255) NULL COMMENT '自定义图标相对路径';
+
+-- TiDB cannot index a column in the same ALTER statement that introduces it.
+ALTER TABLE tech_stack
     ADD KEY idx_tech_stack_catalog_id (catalog_id);
 
 INSERT INTO tech_catalog (name, icon, category, is_custom, sort_order) VALUES
